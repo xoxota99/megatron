@@ -1,12 +1,26 @@
 package com.megatron.model;
 
-import com.oddlabs.procedurality.Channel;
-
-
 public class City {
-	private int size = 1024;
-	private Channel terrain;
-	private long seed = 0L; // System.getCurrentTimeMillis();
+	private int size = 256;
+	private float waterLevel = 20;
+	private long seed = 0L;// System.currentTimeMillis();
+	private float[][] terrain;
+
+	public float[][] getTerrain() {
+		return terrain;
+	}
+
+	public void setTerrain(float[][] terrain) {
+		this.terrain = terrain;
+	}
+
+	public float getWaterLevel() {
+		return waterLevel;
+	}
+
+	public void setWaterLevel(float waterLevel) {
+		this.waterLevel = waterLevel;
+	}
 
 	public long getSeed() {
 		return seed;
@@ -14,14 +28,6 @@ public class City {
 
 	public void setSeed(long seed) {
 		this.seed = seed;
-	}
-
-	public Channel getTerrain() {
-		return terrain;
-	}
-
-	public void setTerrain(Channel terrain) {
-		this.terrain = terrain;
 	}
 
 	public void setSize(int size) {

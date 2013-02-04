@@ -1,4 +1,4 @@
-package com.megatron.test.ui;
+package com.megatron.test.ui.swing;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -24,8 +24,9 @@ import javax.swing.JRadioButton;
 
 import com.megatron.model.City;
 import com.oddlabs.procedurality.ChannelFactory;
-import com.oddlabs.procedurality.terrain.Hill;
-import com.oddlabs.procedurality.terrain.Perlin;
+import com.oddlabs.procedurality.Utils;
+import com.oddlabs.procedurality.Terrain.Hill;
+import com.oddlabs.procedurality.Terrain.Mountain;
 
 public class MainWindow {
 
@@ -63,11 +64,11 @@ public class MainWindow {
 	private void initModel() {
 		city = new City();
 		ChannelFactory cf;
-		// cf = new Mountain(city.getSize(), 1, 0.5f, city.getSeed());
+		 cf = new Mountain(city.getSize(), Utils.powerOf2Log2(city.getSize()) - 6, 0.5f, city.getSeed());
 		// cf = new
 		// Perlin(city.getSize(),city.getSize(),1,5,0.4f,10,city.getSeed(),Perlin.CUBIC,Perlin.WOOD2);
-		cf = new Hill(city.getSize(), Hill.CIRCLE);
-		city.setTerrain(cf.toChannel());
+		//cf = new Hill(city.getSize(), Hill.CIRCLE);
+		city.setTerrain(cf.toChannel().cells);
 	}
 
 	private void updateView(City c) {
@@ -76,7 +77,7 @@ public class MainWindow {
 			Graphics imgGfx = imgMap.getGraphics();
 			imgGfx.setColor(new Color(0x001133));
 			imgGfx.fillRect(0, 0, city.getSize(), city.getSize());
-			float[][] data = city.getTerrain().getCells();
+			float[][] data = city.getTerrain();
 			for (int x = 0; x < city.getSize(); x++) {
 				for (int z = 0; z < city.getSize(); z++) {
 					float height = data[x][z];

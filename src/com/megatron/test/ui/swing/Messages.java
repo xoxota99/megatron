@@ -1,4 +1,4 @@
-package com.megatron.test.ui;
+package com.megatron.test.ui.swing;
 
 import java.beans.Beans;
 import java.util.MissingResourceException;
@@ -18,7 +18,7 @@ public class Messages {
 	// Bundle access
 	//
 	////////////////////////////////////////////////////////////////////////////
-	private static final String BUNDLE_NAME = "com.megatron.test.ui.messages"; //$NON-NLS-1$
+	private static final String BUNDLE_NAME = "com.megatron.test.ui.swing.messages"; //$NON-NLS-1$
 	private static final ResourceBundle RESOURCE_BUNDLE = loadBundle();
 	private static ResourceBundle loadBundle() {
 		return ResourceBundle.getBundle(BUNDLE_NAME);

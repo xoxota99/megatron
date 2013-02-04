@@ -1,0 +1,47 @@
+<project name="megatron" basedir=".">
+	<property name="bin.dir" value="bin" />
+	<property name="src.dir" value="src" />
+	<property name="res.dir" value="res" />
+	<property name="dist.dir" value="dist" />
+	<property name="lib.dir" value="lib" />
+	<path id="libs">
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	<target name="init">
+		<tstamp />
+		<mkdir dir="${bin.dir}" />
+		<mkdir dir="${dist.dir}" />
+	</target>
+
+	<target name="clean">
+		<delete includeemptydirs="true" quiet="true">
+			<fileset dir="${bin.dir}" includes="**/*" />
+			<fileset dir="${dist.dir}" includes="**/*" />
+		</delete>
+	</target>
+
+	<target name="javadoc" depends="build">
+		<javadoc packagenames="com.megatron.*" sourcepath="src" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true" windowtitle="Megatron">
+		</javadoc>
+	</target>
+
+	<target name="build" depends="clean,init,copyres">
+		<javac debug="yes" source="1.6" destdir="${bin.dir}">
+			<src path="${src.dir}" />
+			<classpath refid="libs" />
+		</javac>
+	</target>
+
+	<target name="copyres">
+		<copy todir="${bin.dir}">
+			<fileset dir="${res.dir}" includes="**/*" />
+		</copy>
+	</target>
+
+	<target name="jar" depends="build, copyres">
+		<jar basedir="${bin.dir}" destfile="dist/procedurality.jar" />
+	</target>
+
+</project>
