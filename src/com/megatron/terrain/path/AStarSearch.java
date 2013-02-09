@@ -1,4 +1,4 @@
-package com.megatron.util.path;
+package com.megatron.terrain.path;
 
 import java.util.*;
 
@@ -34,7 +34,7 @@ public class AStarSearch {
 	/**
 	 * Construct the path, not including the start node.
 	 */
-	protected List<AStarNode> constructPath(AStarNode node) {
+	protected LinkedList<AStarNode> constructPath(AStarNode node) {
 		LinkedList<AStarNode> path = new LinkedList<AStarNode>();
 		while (node.pathParent != null) {
 			path.addFirst(node);
@@ -47,10 +47,10 @@ public class AStarSearch {
 	 * Find the path from the start node to the end node. A list of AStarNodes
 	 * is returned, or null if the path is not found.
 	 */
-	public List<AStarNode> findPath(AStarNode startNode, AStarNode goalNode) {
+	public LinkedList<AStarNode> findPath(AStarNode startNode, AStarNode goalNode) {
 
 		PriorityList<AStarNode> openList = new PriorityList<AStarNode>();
-		LinkedList<AStarNode> closedList = new LinkedList<AStarNode>();
+		Map<String,AStarNode> closedList = new TreeMap<String,AStarNode>();
 
 		startNode.costFromStart = 0;
 		startNode.estimatedCostToGoal = startNode.getEstimatedCost(goalNode);
@@ -64,7 +64,7 @@ public class AStarSearch {
 			// pop the cheapest node off the list.
 			AStarNode node = (AStarNode) openList.removeFirst();
 			if (node == goalNode) {
-				// construct the path from start to goal
+				// construct the path (LinkedList, using nodes from openList) from start to goal
 				return constructPath(goalNode);
 			}
 
@@ -72,7 +72,7 @@ public class AStarSearch {
 			for (int i = 0; i < neighbors.size(); i++) {
 				AStarNode neighborNode = (AStarNode) neighbors.get(i);
 				boolean isOpen = openList.contains(neighborNode);
-				boolean isClosed = closedList.contains(neighborNode);
+				boolean isClosed = closedList.containsKey(neighborNode.toString());
 				float costFromStart = node.costFromStart + node.getCost(neighborNode);
 
 				// check if the neighbor node has not been
@@ -89,14 +89,14 @@ public class AStarSearch {
 																// start node).
 					neighborNode.estimatedCostToGoal = neighborNode.getEstimatedCost(goalNode);
 					if (isClosed) {
-						closedList.remove(neighborNode);
+						closedList.remove(neighborNode.toString());
 					}
 					if (!isOpen) {
 						openList.add(neighborNode);
 					}
 				}
 			}
-			closedList.add(node);
+			closedList.put(node.toString(),node);
 		}
 
 		// no path found

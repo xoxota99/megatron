@@ -2,9 +2,8 @@ package com.megatron.terrain;
 
 import java.awt.*;
 import java.util.*;
-import java.util.List;
 
-import com.megatron.util.path.*;
+import com.megatron.terrain.path.*;
 
 /*
  * River carving algorithm, taken mostly from:
@@ -45,7 +44,31 @@ public class RiverFactory {
 		Point startPoint = findStartPoint(edgeVertices);
 		Point endPoint = findEndPoint(edgeVertices, startPoint, size, false);
 
-		float[][] costs = getCosts(terrain, size, startPoint.x, startPoint.y, endPoint.x,endPoint.y);
+		float[][] costs = getGoalDistanceCosts(terrain, size, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+
+		for (int y = 0; y < costs.length; y++) {
+			for (int x = 0; x < costs[y].length; x++) {
+				boolean isStart = (startPoint.x == x && startPoint.y == y);
+				boolean isEnd = (endPoint.x == x && endPoint.y == y);
+				int i = y * size + x;
+				// System.out.printf("%s%f\t", isStart ? "(start)" : isEnd ?
+				// "(end)" : "", retval[i]);
+			}
+			// System.out.println();
+		}
+		// startPoint = 0;
+		// retval[startPoint.y*size+startPoint.x]=0;
+		// retval[endPoint.y*size+endPoint.x]=0;
+		// int currentX = startPoint.x;
+		// int currentY = startPoint.y;
+		// for (int i = 0; i < retval.length; i++) {
+		// int
+		// int x = i % size;
+		// int y = (i - x) / size;
+		//
+		// }
+		//
+		// return retval;
 
 		RiverNode startNode = null, goalNode = null;
 		for (int i = 0; i < retval.length; i++) {
@@ -58,16 +81,19 @@ public class RiverFactory {
 				goalNode = n;
 			}
 		}
-		
+
 		AStarSearch s = new AStarSearch();
 		if (startNode != null && goalNode != null) {
-			List<AStarNode> res = s.findPath(startNode, goalNode);
+			LinkedList<AStarNode> res = s.findPath(startNode, goalNode);
 			if (res != null) {
 				for (AStarNode nd : res) {
 					RiverNode rn = (RiverNode) nd;
+					System.out.printf("%d\t%d", rn.getLocation().x, rn.getLocation().y);
 					int i = (rn.getLocation().y * size) + rn.getLocation().x;
 					retval[i] = 0f;
 				}
+			} else {
+				System.out.println("No Path Found. Could not generate river.");
 			}
 		}
 		// cleanup the terrain around the river.
@@ -77,20 +103,55 @@ public class RiverFactory {
 		return retval;
 	}
 
-	private float[][] getCosts(float[] terrain, int size, int startX, int startY, int endX, int endY){
+	/**
+	 * For every cell in the terrain, get the cost associated with the distance
+	 * from this cell to the goal (in 3Space), then add the absolute cost
+	 * associated with altitude above the goal
+	 * 
+	 * @param terrain
+	 * @param size
+	 * @param startX
+	 * @param startY
+	 * @param endX
+	 * @param endY
+	 * @return
+	 */
+	private float[][] getGoalDistanceCosts(float[] terrain, int size, int startX, int startY, int endX, int endY) {
 		float[][] retval = new float[size][size];
 		for (int i = 0; i < terrain.length; i++) {
 			int x = i % size;
 			int y = (i - x) / size;
-			int dx = x-startX;
-			int dy=y-startY;
-			float cost = (float)Math.sqrt((dx*dx)+(dy*dy));
-			retval[x][y]=cost;
+			float z = terrain[i];
+			int dx = x - endX;
+			int dy = y - endY;
+			float dz = z - terrain[endY * size + endX];
+			float distanceCost = (float) Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+
+			retval[x][y] = distanceCost;
 		}
 		return retval;
 	}
+
+	/**
+	 * Return an array of neighbor cells
+	 * 
+	 * @param terrain
+	 * @param size
+	 * @param x
+	 * @param y
+	 * @param endX
+	 * @param endY
+	 * @param goalDistanceCosts
+	 * @return
+	 */
+	private float[][] getNeighborCosts(float[] terrain, int size, int x, int y, int endX, int endY, float[][] goalDistanceCosts) {
+		float[][] retval = new float[size][size];
+
+		return retval;
+	}
+
 	private Point findEndPoint(TreeMap<Float, Point> verts, Point startPoint, int size, boolean restrictToOpposite) {
-		// StartPoint is in the bottom 1/5 of ordered vertices.
+		// EndPoint is in the bottom 1/5 of ordered vertices.
 		Point retval = startPoint; // force loop entry.
 		while (retval.x == startPoint.x || retval.y == startPoint.y
 				|| (Math.abs(retval.x - startPoint.x) < size - 1

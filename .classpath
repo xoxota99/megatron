@@ -26,7 +26,7 @@
 	<classpathentry kind="lib" path="lib/jme3/lwjgl.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/nifty-default-controls.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/nifty-style-black.jar"/>
-	<classpathentry kind="lib" path="lib/jme3/nifty.jar"/>
+	<classpathentry kind="lib" path="lib/jme3/nifty.jar" sourcepath="/jme3"/>
 	<classpathentry kind="lib" path="lib/jme3/stack-alloc.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/vecmath.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/xmlpull-xpp3.jar"/>

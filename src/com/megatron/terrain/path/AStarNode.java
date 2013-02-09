@@ -1,4 +1,4 @@
-package com.megatron.util.path;
+package com.megatron.terrain.path;
 
 import java.util.*;
 

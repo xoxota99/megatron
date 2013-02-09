@@ -14,6 +14,8 @@ import com.jme3.system.*;
 import com.jme3.terrain.geomipmap.*;
 import com.jme3.terrain.geomipmap.lodcalc.*;
 import com.jme3.terrain.heightmap.*;
+import com.jme3.texture.*;
+import com.jme3.texture.Texture.*;
 import com.megatron.terrain.*;
 
 /**
@@ -28,9 +30,13 @@ public class SmoothingTest extends SimpleApplication {
 	protected static final String INPUT_MAPPING_ERODE = SmoothingTest.class.getName() + ".INPUT_MAPPING_ERODE";
 	protected static final String INPUT_MAPPING_RESET = SmoothingTest.class.getName() + ".INPUT_MAPPING_RESET";
 	protected static final String INPUT_MAPPING_NORMALIZE = SmoothingTest.class.getName() + ".INPUT_MAPPING_NORMALIZE";
+	protected static final String INPUT_MAPPING_WIREFRAME = SmoothingTest.class.getName() + ".INPUT_MAPPING_WIREFRAME";
+	protected static final String INPUT_MAPPING_RAISE = SmoothingTest.class.getName() + ".INPUT_MAPPING_RAISE";
+	protected static final String INPUT_MAPPING_LOWER = SmoothingTest.class.getName() + ".INPUT_MAPPING_LOWER";
 
 	private long seed = 0L;// System.currentTimeMillis();
-	private int size = 256;
+	private int size = 128;//256
+	int patchSize = 17;//65
 	private float maxHeight = 30f;
 	private boolean showGrid = true;
 	private int gridScale = 2;
@@ -40,6 +46,10 @@ public class SmoothingTest extends SimpleApplication {
 	private AbstractHeightMap heightMap;
 	private AbstractHeightMap originalHeightMap;
 	private TerrainQuad terrain;
+
+	private Material mat;
+	private Material wfMat;
+	boolean showWireframe = false;
 
 	// private boolean eroding;
 
@@ -61,32 +71,38 @@ public class SmoothingTest extends SimpleApplication {
 	private ActionListener actionListener = new ActionListener() {
 
 		public void onAction(String name, boolean keyPressed, float tpf) {
+			smoothing = false;
 			if (keyPressed) {
 				if (name.equals(INPUT_MAPPING_GRID)) {
 					toggleGrid();
 				}
 
 				if (name.equals(INPUT_MAPPING_SMOOTH)) {
-					// eroding = false;
 					smoothing = !smoothing;
 				}
 
 				if (name.equals(INPUT_MAPPING_ERODE)) {
-					smoothing = false;
-					// eroding = !eroding;
 					erode();
 				}
 
 				if (name.equals(INPUT_MAPPING_RESET)) {
-					smoothing = false;
-					// eroding = false;
 					reset();
 				}
 
 				if (name.equals(INPUT_MAPPING_NORMALIZE)) {
-					smoothing = false;
-					// eroding = false;
 					normalizeDown(); // normalize down by 10%
+				}
+
+				if (name.equals(INPUT_MAPPING_WIREFRAME)) {
+					toggleWireframe(); // normalize down by 10%
+				}
+
+				if (name.equals(INPUT_MAPPING_RAISE)) {
+					raiseTerrain(1f); // normalize down by 10%
+				}
+
+				if (name.equals(INPUT_MAPPING_LOWER)) {
+					raiseTerrain(-1f); // normalize down by 10%
 				}
 			}
 		}
@@ -103,23 +119,29 @@ public class SmoothingTest extends SimpleApplication {
 		inputManager.addListener(actionListener, INPUT_MAPPING_RESET);
 		inputManager.addMapping(INPUT_MAPPING_NORMALIZE, new KeyTrigger(KeyInput.KEY_N));
 		inputManager.addListener(actionListener, INPUT_MAPPING_NORMALIZE);
+		inputManager.addMapping(INPUT_MAPPING_WIREFRAME, new KeyTrigger(KeyInput.KEY_TAB));
+		inputManager.addListener(actionListener, INPUT_MAPPING_WIREFRAME);
+		inputManager.addMapping(INPUT_MAPPING_LOWER, new KeyTrigger(KeyInput.KEY_PERIOD));
+		inputManager.addListener(actionListener, INPUT_MAPPING_LOWER);
+		inputManager.addMapping(INPUT_MAPPING_RAISE, new KeyTrigger(KeyInput.KEY_COMMA));
+		inputManager.addListener(actionListener, INPUT_MAPPING_RAISE);
 	}
 
-	private void resetMaxHeight() {
-		float[] f = heightMap.getHeightMap();
-		for (int i = 0; i < f.length; i++) {
-			if (f[i] > maxHeight) {
-				maxHeight = f[i];
-			}
-		}
-	}
+	// private void resetMaxHeight() {
+	// float[] f = heightMap.getHeightMap();
+	// for (int i = 0; i < f.length; i++) {
+	// if (f[i] > maxHeight) {
+	// maxHeight = f[i];
+	// }
+	// }
+	// }
 
 	public void reset() {
 		float[] f = originalHeightMap.getHeightMap();
 		for (int i = 0; i < f.length; i++) {
 			int x = (i % (size + 1));
 			int z = ((i - x) / (size + 1));
-			resetMaxHeight();
+			// resetMaxHeight();
 			if (heightMap.getTrueHeightAtPoint(x, z) != f[i]) {
 				heightMap.setHeightAtPoint(f[i], x, z);
 			}
@@ -127,15 +149,24 @@ public class SmoothingTest extends SimpleApplication {
 		updateHeights(f);
 	}
 
+	public void raiseTerrain(float amt) {
+		float[] f = heightMap.getHeightMap();
+		for (int i = 0; i < f.length; i++) {
+			f[i] += amt;
+		}
+		updateHeights(f);
+
+	}
+
 	public void smooth() {
 		heightMap.smooth(1f, 3);
-		resetMaxHeight();
+//		resetMaxHeight();
 		updateHeights(heightMap.getHeightMap());
 	}
 
 	public void erode() {
 		heightMap.flatten((byte) 2);
-		resetMaxHeight();
+//		resetMaxHeight();
 		updateHeights(heightMap.getHeightMap());
 	}
 
@@ -145,15 +176,26 @@ public class SmoothingTest extends SimpleApplication {
 		updateHeights(heightMap.getHeightMap());
 	}
 
+	public void toggleWireframe() {
+		showWireframe = !showWireframe;
+		if (showWireframe) {
+			terrain.setMaterial(wfMat);
+		} else {
+			terrain.setMaterial(mat);
+		}
+	}
+
 	public void updateHeights(float[] f) {
 		if (rootNode.getChild("terrain") == terrain) {
 			List<Vector2f> xz = new ArrayList<Vector2f>();
 			List<Float> height = new ArrayList<Float>();
+			maxHeight = 0;
 			for (int i = 0; i < f.length; i++) {
 				// x and y are the indices into the heightMap.
 				int x = (i % (size + 1));
 				int z = ((i - x) / (size + 1));
-
+				if (f[i] > maxHeight)
+					maxHeight = f[i];
 				// But the "origin" on the terrain Spatial is in the middle (it
 				// looks like?). So change the x/y coordinate, I guess...
 				x = x - ((size + 1) / 2);
@@ -184,6 +226,12 @@ public class SmoothingTest extends SimpleApplication {
 	}
 
 	private Material setupMaterial() {
+		mat = setupHeightBasedMaterial();
+		wfMat = setupWireframeMaterial();
+		return showWireframe ? wfMat : mat;
+	}
+
+	private Material setupWireframeMaterial() {
 		Material m = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
 		m.setColor("Color", ColorRGBA.Green);
 		m.getAdditionalRenderState().setWireframe(true);
@@ -191,16 +239,58 @@ public class SmoothingTest extends SimpleApplication {
 		return m;
 	}
 
+	private Material setupHeightBasedMaterial() {
+		float dirtScale = 128;
+		float grassScale = 128;
+		float rockScale = 128;
+
+		// TERRAIN TEXTURE material
+		Material retval = new Material(assetManager, "Common/MatDefs/Terrain/HeightBasedTerrain.j3md");
+
+		// DIRT texture
+		Texture dirt = this.assetManager.loadTexture("Textures/Terrain/splat/dirt.jpg");
+		dirt.setWrap(WrapMode.Repeat);
+		// GRASS texture
+		Texture grass = this.assetManager.loadTexture("Textures/Terrain/splat/grass.jpg");
+		grass.setWrap(WrapMode.Repeat);
+		// ROCK texture
+		Texture rock = this.assetManager.loadTexture("Textures/Terrain/Rock2/rock.jpg");
+		rock.setWrap(WrapMode.Repeat);
+
+		retval.setTexture("region1ColorMap", grass);
+		retval.setVector3("region1", new Vector3f(-20, 20, grassScale));
+
+		retval.setTexture("region2ColorMap", grass);
+		retval.setVector3("region2", new Vector3f(0, 150, grassScale));
+
+		retval.setTexture("region3ColorMap", rock);
+		retval.setVector3("region3", new Vector3f(140, 260, rockScale));
+
+		retval.setTexture("region4ColorMap", rock);
+		retval.setVector3("region4", new Vector3f(198, 260, rockScale));
+
+		retval.setTexture("slopeColorMap", rock);
+		retval.setFloat("slopeTileFactor", 32);
+
+		retval.setFloat("terrainSize", size + 1);
+
+		// retval.getAdditionalRenderState().setFaceCullMode(FaceCullMode.Off);
+		// retval.getAdditionalRenderState().setWireframe(true);
+
+		return retval;
+
+	}
+
 	private void setupHeightMap(int size, long seed) {
 		heightMap = null;
 		try {
 			heightMap = new FaultHeightMap(size + 1, 1000, FaultHeightMap.FAULTTYPE_COSINE, FaultHeightMap.FAULTSHAPE_LINE, 1f, 20f, seed);
 
-			heightMap.load();
+//			heightMap.load();
 
-			heightMap.normalizeTerrain(maxHeight);
+//			heightMap.normalizeTerrain(maxHeight);
 
-			heightMap.smooth(1, 10);
+//			heightMap.smooth(1, 10);
 
 			// now back it up, for "reset".
 			originalHeightMap = new AbstractHeightMap() {
@@ -210,7 +300,6 @@ public class SmoothingTest extends SimpleApplication {
 					float[] f2 = new float[f.length];
 					System.arraycopy(f, 0, f2, 0, f.length);
 					this.heightData = f2;
-					// this.heightData = heightMap.getHeightMap();
 					return true;
 				}
 			};
@@ -229,7 +318,6 @@ public class SmoothingTest extends SimpleApplication {
 	}
 
 	private void setupTerrain(int size, long seed) {
-		int patchSize = 65;
 		setupHeightMap(size, seed);
 		terrain = new TerrainQuad("terrain", patchSize, size + 1, heightMap.getHeightMap());
 
@@ -271,8 +359,8 @@ public class SmoothingTest extends SimpleApplication {
 		g.setMaterial(mat);
 		g.center().move(pos);
 
-		Material mat2 = mat.clone();
-		mat2.setColor("Color", ColorRGBA.LightGray);
+		// Material mat2 = mat.clone();
+		// mat2.setColor("Color", ColorRGBA.LightGray);
 
 		// g2.setMaterial(mat2);
 		// Vector3f pos2 = new Vector3f(pos);
@@ -320,14 +408,14 @@ public class SmoothingTest extends SimpleApplication {
 		setupKeys(); // G for grid, Equals (=) for smoothing.
 		setupCamera();
 
-		Material mat = setupMaterial();
+		Material m = setupMaterial();
 
 		setupTerrain(size, seed);
 
 		// setupMesh();
-		// setupRiver();
+		 setupRiver();
 
-		terrain.setMaterial(mat);
+		terrain.setMaterial(m);
 
 		rootNode.attachChild(terrain);
 

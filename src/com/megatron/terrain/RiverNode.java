@@ -4,13 +4,17 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
-import com.megatron.util.path.*;
+import com.megatron.terrain.path.*;
 
 public class RiverNode extends AStarNode {
 
 	private Point location;
 	private float height;
 	private static List<List<RiverNode>> allNodes = new ArrayList<List<RiverNode>>();
+
+	public String toString() {
+		return String.format("%d,%d", location.x, location.y);
+	}
 
 	public RiverNode(Point coordinates, float value) {
 		this.location = coordinates;
@@ -30,24 +34,29 @@ public class RiverNode extends AStarNode {
 	public float getCost(AStarNode node) {
 		RiverNode rn = (RiverNode) node;
 		float cost = 0f;
-		cost = rn.getHeight(); // adjust for absolute height.
-		cost += rn.getHeight() - getHeight(); // adjust for relative height.
+		// cost = rn.getHeight(); // adjust for absolute height.
+		// cost += rn.getHeight() - getHeight(); // adjust for relative height.
 
 		// Additional Cost for distance.
 		float dx = rn.getLocation().x - location.x;
 		float dy = rn.getLocation().y - location.y;
-		cost += (float) Math.sqrt((dx * dx) + (dy * dy));
+//		float dz = rn.getHeight() - height;
+//		cost += (float) Math.sqrt((dx * dx) + (dy * dy));// + (dz * dz));		//in fact, Just Distance.
+		cost += 1.2*Math.abs(dx);
+		cost += 1.2*Math.abs(dy);
+//		cost += 1.2*Math.abs(dz);
+//		cost += 1.2*rn.getHeight();
 		return cost;
 	}
 
 	@Override
 	public float getEstimatedCost(AStarNode node) {
-		//estimate based on straight-line distance.
+		// estimate based on straight-line distance.
 		return getCost(node);
-//		RiverNode rn = (RiverNode) node;
-//		float dx = rn.getLocation().x - location.x;
-//		float dy = rn.getLocation().y - location.y;
-//		return (float) Math.sqrt((dx * dx) + (dy * dy));
+		// RiverNode rn = (RiverNode) node;
+		// float dx = rn.getLocation().x - location.x;
+		// float dy = rn.getLocation().y - location.y;
+		// return (float) Math.sqrt((dx * dx) + (dy * dy));
 	}
 
 	@Override

@@ -1,4 +1,4 @@
-<project name="megatron" basedir=".">
+<project name="megatron" basedir="." default="build">
 	<property name="bin.dir" value="bin" />
 	<property name="src.dir" value="src" />
 	<property name="res.dir" value="res" />
