@@ -4,7 +4,6 @@ import java.util.*;
 
 import com.jme3.app.*;
 import com.jme3.app.state.*;
-import com.jme3.bullet.*;
 import com.jme3.collision.*;
 import com.jme3.font.*;
 import com.jme3.input.*;
@@ -18,6 +17,7 @@ import com.jme3.scene.debug.*;
 import com.jme3.scene.shape.*;
 import com.megatron.application.*;
 import com.megatron.application.tools.*;
+import com.megatron.model.*;
 
 /**
  * ToolAppState allows you to:
@@ -54,26 +54,24 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	// Use the currently selected tool, in the currently selected mode.
 	private static final String INPUT_TOOL = ToolAppState.class.getName() + ".INPUT_TOOL";
 	// "Decrease" the tool.
-	private static final String INPUT_TOOL_DOWN = ToolAppState.class.getName() + ".INPUT_TOOL_DOWN";
+	private static final String INPUT_TOOL_DECREASE = ToolAppState.class.getName() + ".INPUT_TOOL_DECREASE";
 	// "Increase" the tool.
 	private static final String INPUT_TOOL_SELECT_PREFIX = ToolAppState.class.getName() + ".INPUT_TOOL_SELECT_";
 	private static final String INPUT_TOOLSET_SELECT_PREFIX = ToolAppState.class.getName() + ".INPUT_TOOLSET_SELECT_";
-	private static final String INPUT_TOOL_UP = ToolAppState.class.getName() + ".INPUT_TOOL_UP";
+	private static final String INPUT_TOOL_INCREASE = ToolAppState.class.getName() + ".INPUT_TOOL_INCREASE";
 	private static final String MOD_CTRL = ToolAppState.class.getName() + ".MOD_CTRL";
 	private static final String MOD_SHIFT = ToolAppState.class.getName() + ".MOD_SHIFT";
 	private static final String MOD_ALT = ToolAppState.class.getName() + ".MOD_ALT";
 
 	private static final String TOGGLE_WIREFRAME = ToolAppState.class.getName() + ".TOGGLE_WIREFRAME";
 
-	// private static final Logger logger =
-	// Logger.getLogger(ToolsetAppState.class.getName());
 	private static final ColorRGBA cursorColor = new ColorRGBA(251f / 255f, 130f / 255f, 130f / 255f, 0.2f);
 
 	// This is the plane on which the land block "rests".
 	// private static final Plane basePlane = new Plane(Vector3f.UNIT_Y, -125);
 
-	private TerrainGenTest app;
-	private BulletAppState physics;
+	private MegatronApplication app;
+	// private BulletAppState physics;
 	// private int modifiers = 0;
 	private boolean toolPressed;
 	private Node cursor;
@@ -87,18 +85,18 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	private BitmapFont guiFont;
 	private boolean showHintText = true;
 	private Vector3f cursorPosition;
-	public static final int CURSOR_POWER_MAX = 40;
-	public static final int CURSOR_POWER_MIN = 5;
-	public static final int CURSOR_RADIUS_MAX = 60;
-	public static final int CURSOR_RADIUS_MIN = 5;
+	public static final int CURSOR_RENDER_HEIGHT_MAX = 64;
+	public static final int CURSOR_RENDER_HEIGHT_MIN = 20;
+	public static final int CURSOR_RENDER_RADIUS_MAX = 64;
+	public static final int CURSOR_RENDER_RADIUS_MIN = 10;
 
 	// When we are dragging to move, no tool is selected. We've "suspended" tool
 	// selection.
-	private static final int SUSPEND_TOOL = -1;
+	// private static final int SUSPEND_TOOL = -1;
 	private boolean looking = false; // true while we're looking around.
-	private int cursorRadius = CURSOR_POWER_MAX / 2;
-	private int cursorPower = CURSOR_RADIUS_MAX / 2;
-	private int oldTool;
+	// private int cursorRadius = CURSOR_POWER_MAX / 2;
+	// private int cursorPower = CURSOR_RADIUS_MAX / 2;
+	// private int oldTool;
 	private WorldState worldState;
 	private List<ToolSet> toolBox;
 	private Tool currentTool;
@@ -108,9 +106,11 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	public void initialize(AppStateManager stateManager, Application app) {
 
 		// System.out.println("initialize");
-		this.app = (TerrainGenTest) app; // can cast Application to something
-											// more specific
-		this.physics = this.app.getStateManager().getState(BulletAppState.class);
+		this.app = (MegatronApplication) app; // can cast Application to
+												// something
+												// more specific
+												// this.physics =
+												// this.app.getStateManager().getState(BulletAppState.class);
 		this.worldState = this.app.getWorldState();
 
 		if (!super.isInitialized()) {
@@ -125,8 +125,10 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 
 			setupMappings();
 			setupHintText();
-			setupCursorGeometry();
 			setupToolSets();
+			setupCursorGeometry();
+
+			setCursorVisible(currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE);
 		}
 
 		super.initialize(stateManager, app);
@@ -136,27 +138,47 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		this.toolBox = new ArrayList<ToolSet>();
 		ToolSet terrainTools = new ToolSet("Terrain");
 
-		terrainTools.getTools().add(new LocalElevationTool());
-		terrainTools.getTools().add(new GlobalTool("Zero Out", "Zeros out all terrain") {
+		Tool et = new LocalElevationTool();
+		terrainTools.addTool(et);
+		terrainTools.addTool(new LocalSmoothTool());
+		terrainTools.addTool(new GlobalTool("Zero Out", "Zeros out all terrain") {
 
 			@Override
 			public void execute(WorldState context) {
 				System.out.println("Ad Hoc Tool Alert!");
 			}
+
+			@Override
+			public boolean isContinuous() {
+				return false;
+			}
 		});
 
-		ToolSet popTools = new ToolSet("Population");
-		ToolSet streetTools = new ToolSet("Streets");
-		ToolSet zoneTools = new ToolSet("Zoning");
-		ToolSet conTools = new ToolSet("Construction");
-
-		// Add all the toolsets to our toolbox.
+		worldState.addObserver(terrainTools);
 		toolBox.add(terrainTools);
+
+		// Population Tools
+		ToolSet popTools = new ToolSet("Population");
+		worldState.addObserver(popTools);
 		toolBox.add(popTools);
+
+		// Street Tools
+		ToolSet streetTools = new ToolSet("Streets");
+		worldState.addObserver(streetTools);
 		toolBox.add(streetTools);
+
+		// Zoning Tools
+		ToolSet zoneTools = new ToolSet("Zoning");
+		worldState.addObserver(zoneTools);
 		toolBox.add(zoneTools);
+
+		// Construction Tools
+		ToolSet conTools = new ToolSet("Construction");
+		worldState.addObserver(conTools);
 		toolBox.add(conTools);
 
+		currentToolSet = terrainTools;
+		currentTool = et;
 	}
 
 	private void toggleWireframe() {
@@ -171,13 +193,15 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	private void tearDownMappings() {
 		InputManager inputManager = app.getInputManager();
 		inputManager.deleteMapping(INPUT_TOOL);
-		inputManager.deleteMapping(INPUT_TOOL_DOWN);
-		inputManager.deleteMapping(INPUT_TOOL_UP);
+		inputManager.deleteMapping(INPUT_TOOL_DECREASE);
+		inputManager.deleteMapping(INPUT_TOOL_INCREASE);
 
-		// Keys, 0-9.
+		// Keys, 0-9, F1-F12
 		for (int i = 0; i < 12; i++) {
-			inputManager.deleteMapping(INPUT_TOOL_SELECT_PREFIX + i);
-			inputManager.deleteMapping(INPUT_TOOLSET_SELECT_PREFIX + i);
+			if (inputManager.hasMapping(INPUT_TOOL_SELECT_PREFIX + i))
+				inputManager.deleteMapping(INPUT_TOOL_SELECT_PREFIX + i);
+			if (inputManager.hasMapping(INPUT_TOOLSET_SELECT_PREFIX + i))
+				inputManager.deleteMapping(INPUT_TOOLSET_SELECT_PREFIX + i);
 		}
 
 		// listen for modifier keys.
@@ -196,12 +220,12 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		inputManager.addListener(this, INPUT_TOOL);
 
 		// Decrease Tool. (Scroll Down)
-		inputManager.addMapping(INPUT_TOOL_DOWN, new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
-		inputManager.addListener(this, INPUT_TOOL_DOWN);
+		inputManager.addMapping(INPUT_TOOL_DECREASE, new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
+		inputManager.addListener(this, INPUT_TOOL_DECREASE);
 
 		// Increase tool. (Scroll Up)
-		inputManager.addMapping(INPUT_TOOL_UP, new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
-		inputManager.addListener(this, INPUT_TOOL_UP);
+		inputManager.addMapping(INPUT_TOOL_INCREASE, new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
+		inputManager.addListener(this, INPUT_TOOL_INCREASE);
 
 		// Select Tool. (0-9).
 		int[] toolTrigs = {
@@ -281,19 +305,49 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	// enabled.
 	@Override
 	public void update(float tpf) {
+		// System.out.println(tpf);
 		// Where is the cursor right now?
 		cursorPosition = calculateCursorPosition();
 		updateHintText(cursorPosition);
 		// update the location of the cursor.
-		if (cursor != null && cursorPosition != null) {
-			cursor.setLocalTranslation(cursorPosition.clone().add(0, cursorPower * app.getWorldScale() / 2, 0));
+		if (currentTool != null
+				&& currentTool instanceof LocalTool
+				&& ((LocalTool) currentTool).getCursorType() != CursorType.NONE
+				&& cursor != null
+				&& cursorPosition != null) {
+			cursor.setLocalTranslation(cursorPosition.clone().add(0, ((LocalTool) currentTool).getPower() * app.getWorldRenderScale() / 2, 0));
+		}
+		if (toolPressed && currentTool != null && currentTool.isContinuous()) {
+			applyTool(currentTool, worldState, cursorPosition);
+		}
+	}
+
+	private void applyTool(Tool t, WorldState state, Vector3f pos) {
+		if (t instanceof LocalTool) {
+			// Translate rendering cordinates into heightMap coordinates.
+			int cursorX = (int) ((pos.x / app.getWorldRenderScale()) + (state.getSize() / 2));
+			int cursorY = (int) ((pos.z / app.getWorldRenderScale()) + (state.getSize() / 2));
+			((LocalTool) t).execute(state, cursorX, cursorY);
+		} else if (t instanceof GlobalTool) {
+			((GlobalTool) t).execute(state);
 		}
 	}
 
 	private void updateHintText(Vector3f intersection) {
 		if (showHintText && intersection != null && hintText != null) {
-			String s = "  intersect: " + intersection.toString();
-			hintText.setText(s);
+			StringBuilder sb = new StringBuilder();
+			if (currentToolSet != null) {
+				sb.append(currentToolSet.getName() + " : ");
+			}
+			if (currentTool != null) {
+				sb.append(currentTool.getName());
+				if (currentTool instanceof LocalTool) {
+					sb.append(String.format(" (P: %f,R: %f)", ((LocalTool) currentTool).getPower(), ((LocalTool) currentTool).getRadius()));
+				}
+				sb.append(", ");
+			}
+			sb.append("intersect: " + intersection.toString());
+			hintText.setText(sb.toString());
 		}
 	}
 
@@ -316,35 +370,56 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			if (name.equals(INPUT_TOOL)) { // Use your tool.
 				// System.out.println("Use your tool.");
 				toolPressed = value;
-			} else if (value && name.startsWith(INPUT_TOOL_SELECT_PREFIX)) {
-				currentTool = currentToolSet.getTools().get(Integer.parseInt(name.substring(name.length() - 1)));
-				setCursorVisible(app.setCurrentTool(tool));
-			} else if (value && name.startsWith(INPUT_TOOLSET_SELECT_PREFIX)) {
-				int tool = Integer.parseInt(name.substring(name.length() - 1));
-				// System.out.println("Tool = " + tool);
-				setCursorVisible(app.setCurrentTool(tool));
-			} else if (name.equals(INPUT_TOOL_DOWN)) {
-				if (currentTool != null) {
-					if (currentTool instanceof LocalTool) {
-						((LocalTool) currentTool).execute(worldState, cursorX, cursorY);
-					} else if (currentTool instanceof GlobalTool) {
-						((GlobalTool) currentTool).execute(worldState);
-					}
+				if (toolPressed && currentTool != null) {
+					applyTool(currentTool, worldState, cursorPosition);
 				}
-				if (app.hasCursor()) {
+			} else if (value && name.startsWith(INPUT_TOOL_SELECT_PREFIX)) {
+				if (currentToolSet != null && currentToolSet.size() > Integer.parseInt(name.substring(name.length() - 1))) {
+					currentTool = currentToolSet.getTool(Integer.parseInt(name.substring(name.length() - 1)));
+					updateCursorGeometry();
+					setCursorVisible(currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE);
+				}
+			} else if (value && name.startsWith(INPUT_TOOLSET_SELECT_PREFIX)) {
+				currentToolSet = toolBox.get(Integer.parseInt(name.substring(name.length() - 1)));
+
+				// TODO: Only do this if the toolset actually changes.
+				// TODO: Keep track of currently selected tools by toolset, and
+				// go back to that tool if we go back to the toolset.
+				currentTool = null;
+				setCursorVisible(false);
+			} else if (name.equals(INPUT_TOOL_DECREASE)) {
+				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) { // legacy
+																																					// mode.
 					if ((worldState.getInputModifiers() & WorldState.ALT) > 0) {
-						cursorPower = (int) Math.max(cursorPower - 1, CURSOR_POWER_MIN);
+						System.out.println("Decrease Power.");
+						// ((LocalTool) currentTool).setPower((int)
+						// Math.max(((LocalTool) currentTool).getPower() - 1,
+						// CURSOR_RENDER_HEIGHT_MIN));
+						((LocalTool) currentTool).setPower(Math.max(((LocalTool) currentTool).getPower() - 0.01f, 0.01f));
 					} else {
-						cursorRadius = (int) Math.max(cursorRadius - 1, CURSOR_RADIUS_MIN);
+						System.out.println("Decrease Radius.");
+						// ((LocalTool) currentTool).setRadius((int)
+						// Math.max(((LocalTool) currentTool).getRadius() - 1,
+						// CURSOR_RENDER_RADIUS_MIN));
+						((LocalTool) currentTool).setRadius(Math.max(((LocalTool) currentTool).getRadius() - 0.01f, 0.01f));
 					}
 					updateCursorGeometry();
 				}
-			} else if (name.equals(INPUT_TOOL_UP)) {
-				if (app.hasCursor()) {
+			} else if (name.equals(INPUT_TOOL_INCREASE)) {
+				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) { // legacy
+																																					// mode.
 					if ((worldState.getInputModifiers() & WorldState.ALT) > 0) {
-						cursorPower = (int) Math.min(cursorPower + 1, CURSOR_POWER_MAX);
+						System.out.println("Increase Power.");
+						// ((LocalTool) currentTool).setPower((int)
+						// Math.min(((LocalTool) currentTool).getPower() + 1,
+						// CURSOR_RENDER_HEIGHT_MAX));
+						((LocalTool) currentTool).setPower(Math.min(((LocalTool) currentTool).getPower() + 0.01f, 1.0f));
 					} else {
-						cursorRadius = (int) Math.min(cursorRadius + 1, CURSOR_RADIUS_MAX);
+						System.out.println("Increase Radius.");
+						// ((LocalTool) currentTool).setRadius((int)
+						// Math.min(((LocalTool) currentTool).getRadius() + 1,
+						// CURSOR_RENDER_RADIUS_MAX));
+						((LocalTool) currentTool).setRadius(Math.min(((LocalTool) currentTool).getRadius() + 0.01f, 1.0f));
 					}
 					updateCursorGeometry();
 				}
@@ -374,15 +449,15 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		} else if (value && name.equals(TOGGLE_WIREFRAME)) {
 			toggleWireframe();
 		} else if (name.equals("FLYCAM_RotateDrag")) {
-			// System.out.println("Looking = " + value);
 			if (looking != value) {
+				System.out.println("Looking = " + value);
 				looking = value;
 				if (looking) {
-					oldTool = app.getCurrentTool();
-					app.setCurrentTool(0);
+					// hide the cursor.
 					setCursorVisible(false);
 				} else {
-					setCursorVisible(app.setCurrentTool(oldTool));
+					// show the cursor.
+					setCursorVisible(currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE);
 					// oldTool = SUSPEND_TOOL;
 				}
 			}
@@ -394,21 +469,28 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	 * Refresh the cursor with the current power and radius.
 	 */
 	private void updateCursorGeometry() {
-		if (cursor == null) {
-			setupCursorGeometry();
-		} else {
-			float renderRadius = cursorRadius * app.getWorldScale() / 2;
-			float renderHeight = cursorPower * 2 * app.getWorldScale() / 2;
-			Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, renderHeight, true, false);
+		System.out.println("updateCursorGeometry");
+		if (currentTool != null && currentTool instanceof LocalTool) {
+			if (cursor == null) {
+				setupCursorGeometry();
+			} else {
+				float renderRadius = CURSOR_RENDER_RADIUS_MIN + ((CURSOR_RENDER_RADIUS_MAX - CURSOR_RENDER_RADIUS_MIN) * ((LocalTool) currentTool).getRadius() * app.getWorldRenderScale() / 2);
+				float renderHeight = CURSOR_RENDER_HEIGHT_MIN + ((CURSOR_RENDER_HEIGHT_MAX - CURSOR_RENDER_HEIGHT_MIN) * ((LocalTool) currentTool).getPower() * app.getWorldRenderScale());
+				Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, renderHeight, true, false);
 
-			Geometry cone = (Geometry) cursor.getChild("Cone");
-			cone.setMesh(mrk);
+				Geometry cone = (Geometry) cursor.getChild("Cone");
+				cone.setLocalTranslation(0, renderHeight / 2, 0);
+				cone.setMesh(mrk);
 
-			Geometry cursorNormal = (Geometry) cursor.getChild("Arrow");
-			cursorNormal.setLocalTranslation(0, -renderHeight / 2, 0);
-			cursorNormal.setLocalScale(renderHeight / 2);
+				Geometry cursorNormal = (Geometry) cursor.getChild("Arrow");
+				// cursorNormal.setLocalTranslation(0, -renderHeight / 2, 0);
+				cursorNormal.setLocalTranslation(0, 0, 0);
+				cursorNormal.setLocalScale(renderHeight / 2);
 
-			cursor.updateModelBound();
+				System.out.printf("renderHeight: %f", renderHeight);
+
+				cursor.updateModelBound();
+			}
 		}
 	}
 
@@ -417,43 +499,47 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	}
 
 	private void setupCursorGeometry() {
+		System.out.println("setupCursor");
+		if (currentTool != null && currentTool instanceof LocalTool) {
+			float renderRadius = CURSOR_RENDER_RADIUS_MIN + ((CURSOR_RENDER_RADIUS_MAX - CURSOR_RENDER_RADIUS_MIN) * ((LocalTool) currentTool).getRadius() * app.getWorldRenderScale() / 2);
+			float renderHeight = CURSOR_RENDER_HEIGHT_MIN + ((CURSOR_RENDER_HEIGHT_MAX - CURSOR_RENDER_HEIGHT_MIN) * ((LocalTool) currentTool).getPower() * app.getWorldRenderScale());
+			Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, renderHeight, true, false);
 
-		float renderRadius = cursorRadius * app.getWorldScale() / 2;
-		float renderHeight = cursorPower * 2 * app.getWorldScale() / 2;
-		Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, renderHeight, true, false);
+			Geometry cone = new Geometry("Cone");
+			cone.setMesh(mrk);
+			cone.setQueueBucket(RenderQueue.Bucket.Transparent);
 
-		Geometry cone = new Geometry("Cone");
-		cone.setMesh(mrk);
-		cone.setQueueBucket(RenderQueue.Bucket.Transparent);
+			cone.rotate((float) (Math.PI / 2), 0, 0);
+			cone.setLocalTranslation(0, renderHeight / 2, 0);
+			// cursor.setCullHint(CullHint.Never);
 
-		cone.rotate((float) (Math.PI / 2), 0, 0);
-		// cursor.setLocalTranslation(0, cursorPower * 100, 0);
-		// cursor.setCullHint(CullHint.Never);
+			cursorMaterial = new Material(app.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
+			cursorMaterial.setColor("Color", cursorColor);
+			cursorMaterial.getAdditionalRenderState().setBlendMode(BlendMode.AlphaAdditive);
 
-		cursorMaterial = new Material(app.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
-		cursorMaterial.setColor("Color", cursorColor);
-		cursorMaterial.getAdditionalRenderState().setBlendMode(BlendMode.AlphaAdditive);
+			cone.setMaterial(cursorMaterial);
 
-		cone.setMaterial(cursorMaterial);
+			wireframeMaterial = Util.getWireframeMaterial(app.getAssetManager(), cursorColor);
 
-		wireframeMaterial = Util.getWireframeMaterial(app.getAssetManager(), cursorColor);
+			// surface normal marker
+			Arrow arrow = new Arrow(Vector3f.UNIT_Y);
+			arrow.setLineWidth(4f);
 
-		// surface normal marker
-		Arrow arrow = new Arrow(Vector3f.UNIT_Y);
-		arrow.setLineWidth(4f);
+			Geometry norm = new Geometry("Arrow");
+			norm.setMesh(arrow);
+			norm.setMaterial(cursorMaterial);
+			norm.setLocalTranslation(0, 0, 0);
+			norm.setLocalScale(renderHeight / 2);
 
-		Geometry norm = new Geometry("Arrow");
-		norm.setMesh(arrow);
-		norm.setMaterial(cursorMaterial);
-		norm.setLocalTranslation(0, -renderHeight / 2, 0);
-		norm.setLocalScale(renderHeight / 2);
+			System.out.printf("renderHeight: %f", renderHeight);
 
-		cursor = new Node();
-		cursor.attachChild(cone);
-		cursor.attachChild(norm);
+			cursor = new Node("Cursor");
+			cursor.attachChild(cone);
+			cursor.attachChild(norm);
 
-		setCursorVisible(cursorVisible); // force re-attach
-
+			setCursorVisible(cursorVisible && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE); // force
+																																					// re-attach
+		}
 	}
 
 	private Vector3f calculateCursorPosition() {
@@ -513,7 +599,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	}
 
 	public void setCursorVisible(boolean isVisible, Node n) {
-		if (n != null) {
+		if (n != null && cursor != null) {
 			if (isVisible) {
 				if (!n.hasChild(cursor)) {
 					n.attachChild(cursor);
@@ -537,24 +623,6 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		// System.out.println(String.format("setCursorPosition (%d,%d,%d)",
 		// cursorPosition.x, cursorPosition.y, cursorPosition.z));
 		this.cursorPosition = cursorPosition;
-	}
-
-	public int getCursorRadius() {
-		return cursorRadius;
-	}
-
-	public void setCursorRadius(int cursorRadius) {
-		// System.out.println("setCursorRadius " + cursorRadius);
-		this.cursorRadius = cursorRadius;
-	}
-
-	public int getCursorPower() {
-		return cursorPower;
-	}
-
-	public void setCursorPower(int cursorPower) {
-		// System.out.println("setCursorPower " + cursorPower);
-		this.cursorPower = cursorPower;
 	}
 
 	public boolean isToolPressed() {

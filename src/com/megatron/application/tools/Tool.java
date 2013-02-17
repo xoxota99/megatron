@@ -21,4 +21,13 @@ public interface Tool extends Observer {
 	public String getName();
 
 	public String getToolTipText();
+
+	/**
+	 * Is this tool "continuous"? Can I click and hold the mouse button (or key)
+	 * to trigger it continuously?
+	 * 
+	 * @return true if this tool is triggered continuously as long as the input
+	 *         is on, or false if it triggers once then stops.
+	 */
+	public boolean isContinuous();
 }

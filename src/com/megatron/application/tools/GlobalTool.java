@@ -4,6 +4,7 @@ import java.util.*;
 
 import com.megatron.application.*;
 import com.megatron.application.events.*;
+import com.megatron.model.*;
 
 /**
  * Represents a tool that acts "Globally" . Examples

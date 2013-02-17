@@ -4,15 +4,14 @@ import java.util.*;
 
 import com.megatron.application.*;
 import com.megatron.application.events.*;
+import com.megatron.model.*;
 
 public abstract class LocalTool implements Tool {
 	protected String name;
 	protected String toolTipText;
 	protected CursorType cursorType;
-	protected int power; // The intensity of the effect of this tool, in logical
-							// units.
-	protected int radius; // The radius of the effect of this tool, in logical
-							// coordinates.
+	protected float power; // The relative intensity of the effect of this tool, [0..1]
+	protected float radius; // The relative radius of the effect of this tool, [0..1]
 
 	protected LocalTool(String name, String toolTipText, CursorType cursorType) {
 		this.name = name;
@@ -26,9 +25,11 @@ public abstract class LocalTool implements Tool {
 	 * @param worldState
 	 *            the WorldState on which to execute the tool.
 	 * @param x
-	 *            the X coordinate of the tool's centroid.
+	 *            the X coordinate of the tool's centroid, in "world"
+	 *            coordinates (ie: in the renderer)
 	 * @param y
-	 *            the Y coordinate of the tool's centroid.
+	 *            the Y coordinate of the tool's centroid, in "world"
+	 *            coordinates (ie: in the renderer)
 	 */
 	public abstract void execute(WorldState worldState, int x, int y);
 
@@ -56,32 +57,36 @@ public abstract class LocalTool implements Tool {
 		this.cursorType = cursorType;
 	}
 
-	public int getPower() {
+	public float getPower() {
 		return power;
 	}
 
-	public void setPower(int power) {
+	public void setPower(float power) {
 		this.power = power;
 	}
 
-	public int getRadius() {
+	public float getRadius() {
 		return radius;
 	}
 
-	public void setRadius(int radius) {
+	public void setRadius(float radius) {
 		this.radius = radius;
 	}
 
 	@Override
 	public void update(Observable o, Object arg) {
-		if (o instanceof WorldState) {
+		if (o instanceof ToolSet) {	//TODO: This will actually be an instance of ToolSet. Which is probably wrong.
 			if (arg instanceof Event) {
 				if (((Event) arg).getSource() != this) {
-					System.out.println("Hey! I received a WorldState Event (of type " + arg.getClass().getName() + ")");
+					//Hey! I received a ToolSet Event.
 				} else {
-					System.out.println("Hey! I received a WorlState Event, but I'm the source, so I'll ignore it.");
+					//Hey! I received a ToolSet Event, but I'm the source, so I'll ignore it.
 				}
+			} else {
+				System.out.println(arg.getClass().getName());
 			}
+		} else {
+			System.out.println(o.getClass().getName());
 		}
 	}
 

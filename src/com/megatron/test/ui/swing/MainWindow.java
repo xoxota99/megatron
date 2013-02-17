@@ -22,7 +22,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
-import com.megatron.model.City;
+import com.megatron.model.*;
+import com.megatron.terrain.*;
 import com.oddlabs.procedurality.ChannelFactory;
 import com.oddlabs.procedurality.Utils;
 import com.oddlabs.procedurality.Terrain.Hill;
@@ -31,7 +32,8 @@ import com.oddlabs.procedurality.Terrain.Mountain;
 public class MainWindow {
 
 	private JFrame frame;
-	private City city;
+	// private worldState worldState;
+	private WorldState worldState;
 	private JPanel renderTarget;
 	private String nextPipelineStep = "terrain";
 	private BufferedImage imgMap;
@@ -62,25 +64,25 @@ public class MainWindow {
 	}
 
 	private void initModel() {
-		city = new City();
+		worldState = new WorldState();
 		ChannelFactory cf;
-		 cf = new Mountain(city.getSize(), Utils.powerOf2Log2(city.getSize()) - 6, 0.5f, city.getSeed());
+		cf = new Mountain(worldState.getSize(), Utils.powerOf2Log2(worldState.getSize()) - 6, 0.5f, worldState.getSeed());
 		// cf = new
-		// Perlin(city.getSize(),city.getSize(),1,5,0.4f,10,city.getSeed(),Perlin.CUBIC,Perlin.WOOD2);
-		//cf = new Hill(city.getSize(), Hill.CIRCLE);
-		city.setTerrain(cf.toChannel().cells);
+		// Perlin(worldState.getSize(),worldState.getSize(),1,5,0.4f,10,worldState.getSeed(),Perlin.CUBIC,Perlin.WOOD2);
+		// cf = new Hill(worldState.getSize(), Hill.CIRCLE);
+		worldState.setTerrainHeightMap(Terrain.createRandomHeightMap(worldState.getSize(), 64f, worldState.getSeed()));
 	}
 
-	private void updateView(City c) {
+	private void updateView() {
 		if (renderTarget != null) {
 			Graphics2D g2d = (Graphics2D) renderTarget.getGraphics();
 			Graphics imgGfx = imgMap.getGraphics();
 			imgGfx.setColor(new Color(0x001133));
-			imgGfx.fillRect(0, 0, city.getSize(), city.getSize());
-			float[][] data = city.getTerrain();
-			for (int x = 0; x < city.getSize(); x++) {
-				for (int z = 0; z < city.getSize(); z++) {
-					float height = data[x][z];
+			imgGfx.fillRect(0, 0, worldState.getSize(), worldState.getSize());
+			float[] data = worldState.getTerrainHeightMap().getHeightMap();
+			for (int x = 0; x < worldState.getSize(); x++) {
+				for (int z = 0; z < worldState.getSize(); z++) {
+					float height = data[z * worldState.getSize() + x];
 					int val = (int) (0xFF * height);
 
 					int rgb = (val << 16)
@@ -107,11 +109,11 @@ public class MainWindow {
 	// Command cmd = Globals.catalog.getCommand(nextPipelineStep);
 	// if (cmd != null) {
 	// try {
-	// if (cmd.execute(city)) {
+	// if (cmd.execute(worldState)) {
 	// // unlock the next pipeline step.
 	// System.out.println("Hey, we're done with '" + nextPipelineStep +
 	// "'. What comes next?");
-	// updateView(city);
+	// updateView(worldState);
 	// }
 	// } catch (Exception e) {
 	// // TODO Auto-generated catch block
@@ -124,7 +126,7 @@ public class MainWindow {
 	 * Initialize the contents of the frame.
 	 */
 	private void initView() {
-		imgMap = new BufferedImage(city.getSize(), city.getSize(), BufferedImage.TYPE_INT_RGB);
+		imgMap = new BufferedImage(worldState.getSize(), worldState.getSize(), BufferedImage.TYPE_INT_RGB);
 
 		frame = new JFrame();
 		frame.setBounds(100, 100, 450, 300);
@@ -364,14 +366,14 @@ public class MainWindow {
 			public void componentResized(ComponentEvent arg0) {
 				// TODO Auto-generated method stub
 				System.out.println("renderTarget resized");
-				updateView(city);
+				updateView();
 			}
 
 			@Override
 			public void componentShown(ComponentEvent arg0) {
 				// TODO Auto-generated method stub
 				System.out.println("renderTarget shown");
-				updateView(city);
+				updateView();
 			}
 		});
 	}
