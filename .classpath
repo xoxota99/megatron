@@ -5,7 +5,7 @@
 	<classpathentry kind="lib" path="lib/procedurality.jar" sourcepath="/procedurality"/>
 	<classpathentry kind="lib" path="lib/jme3/jME3-core.jar" sourcepath="/jme3"/>
 	<classpathentry kind="lib" path="lib/jme3/jME3-terrain.jar" sourcepath="/jme3"/>
-	<classpathentry kind="lib" path="lib/jme3/jME3-desktop.jar"/>
+	<classpathentry kind="lib" path="lib/jme3/jME3-desktop.jar" sourcepath="/jme3/src"/>
 	<classpathentry kind="lib" path="lib/jme3/eventbus.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/gluegen-rt.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/j-ogg-oggd.jar"/>

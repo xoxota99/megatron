@@ -23,7 +23,7 @@
 	</target>
 
 	<target name="javadoc" depends="build">
-		<javadoc packagenames="com.megatron.*" sourcepath="src" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true" windowtitle="Megatron">
+		<javadoc packagenames="com.skyline.*" sourcepath="src" defaultexcludes="yes" destdir="docs/api" author="true" version="true" use="true" windowtitle="Megatron">
 		</javadoc>
 	</target>
 
