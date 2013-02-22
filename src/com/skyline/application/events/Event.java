@@ -9,6 +9,6 @@ package com.skyline.application.events;
  */
 public interface Event {
 
-	public EventType getEventType();
+//	public EventType getEventType();
 	public Object getSource();
 }

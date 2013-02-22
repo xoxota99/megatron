@@ -27,7 +27,7 @@ public class GlobalZeroTool extends GlobalTool {
 		AbstractHeightMap terrainHeightMap = Terrain.createHeightMap(worldState.getSize(), worldState.getWaterLevel()+1);
 		worldState.setTerrainHeightMap(terrainHeightMap);
 		
-		TerrainChangedEvent evt=new TerrainChangedEvent(this);
+		TerrainEvent evt=new TerrainEvent(this);
 		evt.setNewTerrain(true);
 		worldState.triggerChangeEvent(evt);
 	}

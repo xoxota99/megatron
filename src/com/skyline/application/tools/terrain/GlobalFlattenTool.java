@@ -69,7 +69,7 @@ public class GlobalFlattenTool extends GlobalTool {
 
         
 //		Terrain.trim(worldState);
-		TerrainChangedEvent evt=new TerrainChangedEvent(this);
+		TerrainEvent evt=new TerrainEvent(this);
 
 		worldState.triggerChangeEvent(evt);
 	}

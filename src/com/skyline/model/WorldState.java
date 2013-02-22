@@ -137,7 +137,7 @@ public class WorldState extends Observable {
 	}
 
 	public void setWaterLevel(float waterLevel) {
-		this.waterLevel = waterLevel;
+		this.waterLevel = waterLevel; //TODO: Zero out pop density in places that are below water.
 	}
 
 	public float[][] getPopDensity() {
@@ -147,6 +147,7 @@ public class WorldState extends Observable {
 
 	public void setPopDensity(float[][] popDensity) {
 		this.popDensity = popDensity;
+		//TODO: Zero out pop density in places that are below water.
 		updateMaxPop();
 	}
 

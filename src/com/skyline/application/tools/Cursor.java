@@ -1,6 +1,6 @@
 package com.skyline.application.tools;
 
-import com.skyline.application.*;
+import com.jme3.scene.*;
 import com.skyline.model.*;
 
 /**
@@ -17,7 +17,8 @@ public interface Cursor {
 	//Some theoretical methods. (thinking out loud).
 	public int getRenderHeight();
 	public int getRenderRadius();
-	public int getPower();
-	public int getRadius();
+	public float getPower();	//0..1
+	public float getRadius();	//0..1
 	public void applyTool(Tool t, WorldState worldState, int x, int y);
+	public void render(Node root);
 }

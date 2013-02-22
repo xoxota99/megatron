@@ -16,8 +16,11 @@ import com.jme3.renderer.queue.*;
 import com.jme3.scene.*;
 import com.jme3.scene.debug.*;
 import com.jme3.scene.shape.*;
+import com.jme3.water.*;
 import com.skyline.application.*;
+import com.skyline.application.events.*;
 import com.skyline.application.tools.*;
+import com.skyline.application.tools.population.*;
 import com.skyline.application.tools.terrain.*;
 import com.skyline.model.*;
 
@@ -73,6 +76,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	// private static final Plane basePlane = new Plane(Vector3f.UNIT_Y, -125);
 
 	private boolean showCone = false;
+	private boolean showSpotlight = false;
 	private MegatronApplication app;
 	// private BulletAppState physics;
 	// private int modifiers = 0;
@@ -81,21 +85,21 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	// private Geometry cursorNormal;
 	private Material cursorMaterial;
 	private Material wireframeMaterial;
-	private SpotLight cursorSpotlight;
+	private SpotLight cursorSpotlight = null;
 
 	private boolean showWireframe = false;
 	private boolean cursorVisible = false;
-	private BitmapText hintText;
+	private BitmapText coordText;
 	private BitmapFont guiFont;
-	private boolean showHintText = true;
+	private boolean showCoordinates = true;
 	private Vector3f cursorPosition;
-	public static final int CURSOR_HEIGHT = 100; // Height of the cursor above
-													// the ground.
+	public static final int CURSOR_HEIGHT = 25; // Height of the cursor above
+												// the ground.
 	// public static final int CURSOR_RENDER_HEIGHT_MIN = 20;
-	public static final int CURSOR_RENDER_RADIUS_MAX = 512; // maximum radius of
+	public static final int CURSOR_RENDER_RADIUS_MAX = 256; // maximum radius of
 															// the cursor
 															// "circle".
-	public static final int CURSOR_RENDER_RADIUS_MIN = 16; // minimum radius of
+	public static final int CURSOR_RENDER_RADIUS_MIN = 20; // minimum radius of
 															// the cursor
 															// "circle".
 
@@ -137,10 +141,13 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 				app.getInputManager().deleteMapping("FLYCAM_ZoomOut");
 			}
 
-			guiFont = app.getAssetManager().loadFont("Interface/Fonts/Default.fnt");
+			// guiFont =
+			// app.getAssetManager().loadFont("Interface/Fonts/Default.fnt");
+			guiFont = app.getAssetManager().loadFont("Interface/Fonts/Console.fnt");
 
 			setupMappings();
-			setupHintText();
+			setupCoordText();
+			setupMenuText();
 			setupToolSets();
 			setupCursor();
 
@@ -166,6 +173,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 
 		// Population Tools
 		ToolSet popTools = new ToolSet("Population");
+		popTools.addTool(new LocalPopDensityTool());
 		worldState.addObserver(popTools);
 		toolBox.add(popTools);
 
@@ -298,7 +306,8 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	public void cleanup() {
 		super.cleanup();
 		tearDownMappings();
-		tearDownHintText();
+		tearDownCoordText();
+		tearDownMenuText();
 		tearDownCursorGeometry();
 	}
 
@@ -314,17 +323,22 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	public void update(float tpf) {
 		// System.out.println(tpf);
 		// Where is the cursor right now?
-		cursorPosition = calculateCursorPosition();
-		updateHintText(cursorPosition);
+		Vector3f newPos = calculateCursorPosition();
+//		if (!newPos.equals(cursorPosition)) {
+			updateCoordText(cursorPosition);
+			cursorPosition = newPos;
+			worldState.triggerChangeEvent(new MouseMoveEvent(this, newPos));
+//		}
 		// update the location of the cursor.
 		if (currentTool != null
 				&& currentTool instanceof LocalTool
 				&& ((LocalTool) currentTool).getCursorType() != CursorType.NONE
 				&& cursor != null
 				&& cursorPosition != null) {
-			cursor.setLocalTranslation(cursorPosition.add(0, CURSOR_HEIGHT, 0));
-			cursorSpotlight.setPosition(cursorPosition.add(0, CURSOR_HEIGHT, 0));
-
+			cursor.setLocalTranslation(cursorPosition.add(0, CURSOR_HEIGHT * app.getWorldRenderScale(), 0));
+			if (cursorSpotlight != null) {
+				cursorSpotlight.setPosition(cursorPosition.add(0, CURSOR_HEIGHT * app.getWorldRenderScale(), 0));
+			}
 			// position the "halo".
 
 			float p = ((LocalTool) currentTool).getPower();
@@ -359,58 +373,74 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			// System.out.printf("spotOuterAngle is %f\n", spotOuterAngle);
 
 			// System.out.println("power is " + p);
-			cursorSpotlight.setSpotOuterAngle(spotConeAngle);
-			cursorSpotlight.setSpotInnerAngle(spotConeAngle * .8f);
-			cursorSpotlight.setColor(cursorColor.mult((0.4f + (p * 1.6f)) * 2f));
+			if (cursorSpotlight != null) {
+				cursorSpotlight.setSpotOuterAngle(spotConeAngle);
+				cursorSpotlight.setSpotInnerAngle(spotConeAngle * .8f);
+				cursorSpotlight.setColor(cursorColor.mult((0.4f + (p * 1.6f)) * 2f));
+			}
 		}
 		if (toolPressed && currentTool != null && cursorPosition != null && currentTool.isContinuous()) {
 			applyTool(currentTool, worldState, cursorPosition);
 		}
 	}
 
-	private void applyTool(Tool t, WorldState state, Vector3f pos) {
+	private void applyTool(Tool t, WorldState worldState, Vector3f pos) {
 		if (t instanceof LocalTool) {
-			// Translate rendering cordinates into heightMap coordinates.
-			int cursorX = (int) ((pos.x / app.getWorldRenderScale()) + (state.getSize() / 2));
-			int cursorY = (int) ((pos.z / app.getWorldRenderScale()) + (state.getSize() / 2));
-			((LocalTool) t).execute(state, cursorX, cursorY, inputModifiers);
+			// Translate rendering coordinates into Map coordinates.
+			int cursorX = (int) ((pos.x / app.getWorldRenderScale()) + (worldState.getSize() / 2));
+			int cursorY = (int) ((pos.z / app.getWorldRenderScale()) + (worldState.getSize() / 2));
+			// System.out.printf("(%d,%d)\n",cursorX,cursorY);
+			((LocalTool) t).execute(worldState, cursorX, cursorY, inputModifiers);
 		} else if (t instanceof GlobalTool) {
-			((GlobalTool) t).execute(state, inputModifiers);
+			((GlobalTool) t).execute(worldState, inputModifiers);
 		}
 	}
 
-	private void updateHintText(Vector3f intersection) {
-		if (showHintText && intersection != null && hintText != null) {
-			StringBuilder sb = new StringBuilder();
-			if (currentToolSet != null) {
-				sb.append(currentToolSet.getName() + " : ");
-			}
-			if (currentTool != null) {
-				sb.append(currentTool.getName());
-				if (currentTool instanceof LocalTool) {
-					sb.append(String.format(" (P: %f,R: %f)", ((LocalTool) currentTool).getPower(), ((LocalTool) currentTool).getRadius()));
-				}
-				sb.append(", ");
-			}
-			sb.append("intersect: " + intersection.toString());
-			hintText.setText(sb.toString());
+	private void updateCoordText(Vector3f intersection) {
+		if (showCoordinates && intersection != null && coordText != null) {
+			coordText.setText(intersection.toString());
+			coordText.setLocalTranslation(app.getCamera().getWidth() - coordText.getLineWidth(), coordText.getLineHeight(), 0);
+
+			// StringBuilder sb = new StringBuilder();
+			// if (currentToolSet != null) {
+			// sb.append(currentToolSet.getName() + " : ");
+			// }
+			// if (currentTool != null) {
+			// sb.append(currentTool.getName());
+			// if (currentTool instanceof LocalTool) {
+			// sb.append(String.format(" (P: %f,R: %f)", ((LocalTool)
+			// currentTool).getPower(), ((LocalTool) currentTool).getRadius()));
+			// }
+			// sb.append(", ");
+			// }
+			// sb.append("intersect: " + intersection.toString());
+			// coordText.setText(sb.toString());
 		}
 	}
 
-	private void tearDownHintText() {
-		app.getGuiNode().detachChild(hintText);
+	private void tearDownCoordText() {
+		app.getGuiNode().detachChild(coordText);
 	}
 
-	private void setupHintText() {
-		hintText = new BitmapText(guiFont, false);
-		hintText.setLocalTranslation(0, app.getCamera().getHeight(), 0);
-		hintText.setText("Hint");
-		app.getGuiNode().attachChild(hintText);
+	private void setupCoordText() {
+		coordText = new BitmapText(guiFont, false);
+		coordText.setLocalTranslation(app.getCamera().getWidth() - 100, coordText.getLineHeight(), 0);
+
+		app.getGuiNode().attachChild(coordText);
+	}
+
+	private void setupMenuText() {
+
+	}
+
+	private void tearDownMenuText() {
+
 	}
 
 	@Override
 	public void onAction(String name, boolean value, float tpf) {
 		if (!looking) {
+			float inc = .05f;
 			// System.out.println("not Looking. So processing " + name + ", " +
 			// value);
 			if (name.equals(INPUT_TOOL)) { // Use your tool.
@@ -440,38 +470,38 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 				currentTool = null;
 				setCursorVisible(false);
 			} else if (name.equals(INPUT_TOOL_DECREASE)) {
-				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) { // legacy
-																																					// mode.
+				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) {
+					LocalTool t = (LocalTool) currentTool;
 					if (getInputModifier(ModifierKey.ALT)) {
 						// System.out.println("Decrease Power.");
 						// ((LocalTool) currentTool).setPower((int)
 						// Math.max(((LocalTool) currentTool).getPower() - 1,
 						// CURSOR_RENDER_HEIGHT_MIN));
-						((LocalTool) currentTool).setPower(Math.max(((LocalTool) currentTool).getPower() - 0.01f, 0.01f));
+						((LocalTool) currentTool).setPower(Math.max(((LocalTool) currentTool).getPower() - inc, 0f));
 					} else {
 						// System.out.println("Decrease Radius.");
 						// ((LocalTool) currentTool).setRadius((int)
 						// Math.max(((LocalTool) currentTool).getRadius() - 1,
 						// CURSOR_RENDER_RADIUS_MIN));
-						((LocalTool) currentTool).setRadius(Math.max(((LocalTool) currentTool).getRadius() - 0.01f, 0.01f));
+						((LocalTool) currentTool).setRadius(Math.max(((LocalTool) currentTool).getRadius() - inc, 0f));
 					}
 					updateCursorGeometry();
 				}
 			} else if (name.equals(INPUT_TOOL_INCREASE)) {
-				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) { // legacy
-																																					// mode.
+				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) {
+					LocalTool t = (LocalTool) currentTool;
 					if (getInputModifier(ModifierKey.ALT)) {
 						// System.out.println("Increase Power.");
 						// ((LocalTool) currentTool).setPower((int)
 						// Math.min(((LocalTool) currentTool).getPower() + 1,
 						// CURSOR_RENDER_HEIGHT_MAX));
-						((LocalTool) currentTool).setPower(Math.min(((LocalTool) currentTool).getPower() + 0.01f, 1.0f));
+						((LocalTool) currentTool).setPower(Math.min(((LocalTool) currentTool).getPower() + inc, 1f));
 					} else {
 						// System.out.println("Increase Radius.");
 						// ((LocalTool) currentTool).setRadius((int)
 						// Math.min(((LocalTool) currentTool).getRadius() + 1,
 						// CURSOR_RENDER_RADIUS_MAX));
-						((LocalTool) currentTool).setRadius(Math.min(((LocalTool) currentTool).getRadius() + 0.01f, 1.0f));
+						((LocalTool) currentTool).setRadius(Math.min(((LocalTool) currentTool).getRadius() + inc, 1f));
 					}
 					updateCursorGeometry();
 				}
@@ -520,16 +550,16 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 					// ((CURSOR_RENDER_HEIGHT_MAX - CURSOR_RENDER_HEIGHT_MIN) *
 					// ((LocalTool) currentTool).getPower() *
 					// app.getWorldRenderScale());
-					Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, CURSOR_HEIGHT, true, false);
+					Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, CURSOR_HEIGHT * app.getWorldRenderScale(), true, false);
 
 					Geometry cone = (Geometry) cursor.getChild("Cone");
-					cone.setLocalTranslation(0, CURSOR_HEIGHT / 2, 0);
+					cone.setLocalTranslation(0, CURSOR_HEIGHT * app.getWorldRenderScale() / 2, 0);
 					cone.setMesh(mrk);
 				}
 				Geometry cursorNormal = (Geometry) cursor.getChild("Arrow");
 				// cursorNormal.setLocalTranslation(0, -renderHeight / 2, 0);
-				cursorNormal.setLocalTranslation(0, -CURSOR_HEIGHT, 0);
-				cursorNormal.setLocalScale(CURSOR_HEIGHT);
+				cursorNormal.setLocalTranslation(0, -CURSOR_HEIGHT * app.getWorldRenderScale(), 0);
+				cursorNormal.setLocalScale(CURSOR_HEIGHT * app.getWorldRenderScale());
 
 				// System.out.printf("renderHeight: %f", renderHeight);
 
@@ -583,13 +613,13 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			cursor = new Node("Cursor");
 			if (showCone) {
 				float renderRadius = CURSOR_RENDER_RADIUS_MIN + ((CURSOR_RENDER_RADIUS_MAX - CURSOR_RENDER_RADIUS_MIN) * ((LocalTool) currentTool).getRadius() * app.getWorldRenderScale() / 2);
-				Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, CURSOR_HEIGHT, true, false);
+				Cylinder mrk = new Cylinder(10, 32, renderRadius, 1, CURSOR_HEIGHT * app.getWorldRenderScale(), true, false);
 				Geometry cone = new Geometry("Cone");
 				cone.setMesh(mrk);
 				cone.setQueueBucket(RenderQueue.Bucket.Transparent);
 
 				cone.rotate((float) (Math.PI / 2), 0, 0);
-				cone.setLocalTranslation(0, CURSOR_HEIGHT / 2, 0);
+				cone.setLocalTranslation(0, CURSOR_HEIGHT * app.getWorldRenderScale() / 2, 0);
 				// cursor.setCullHint(CullHint.Never);
 				cone.setMaterial(wireframeMaterial);
 				cursor.attachChild(cone);
@@ -600,11 +630,12 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			Geometry norm = new Geometry("Arrow");
 			norm.setMesh(arrow);
 			norm.setMaterial(wireframeMaterial);
-			norm.setLocalTranslation(0, -CURSOR_HEIGHT, 0);
-			norm.setLocalScale(-CURSOR_HEIGHT);
+			norm.setLocalTranslation(0, -CURSOR_HEIGHT * app.getWorldRenderScale(), 0);
+			norm.setLocalScale(-CURSOR_HEIGHT * app.getWorldRenderScale());
 			cursor.attachChild(norm);
 
-			Sphere sphere = new Sphere(10, 10, 10);
+			int r = Math.max(10,(int) (CURSOR_HEIGHT / 10 * app.getWorldRenderScale()));
+			Sphere sphere = new Sphere(r, r, r);
 			Geometry lightMark = new Geometry("lightMark");
 			lightMark.setMesh(sphere);
 			lightMark.setMaterial(cursorMaterial);
@@ -613,16 +644,17 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 
 			// System.out.printf("renderHeight: %f", renderHeight);
 
-			cursorSpotlight = new SpotLight();
-			cursorSpotlight.setName("cursorSpotlight");
-			cursorSpotlight.setSpotRange(0);
-			cursorSpotlight.setDirection(Vector3f.UNIT_Y.mult(-1));
-			cursorSpotlight.setColor(cursorColor);
-			cursorSpotlight.setSpotOuterAngle(16 * FastMath.DEG_TO_RAD);
-			cursorSpotlight.setSpotInnerAngle(15 * FastMath.DEG_TO_RAD);
-			cursorSpotlight.setPosition(Vector3f.UNIT_Y.mult(45 * app.getWorldRenderScale()));
-			cursorSpotlight.setSpotRange(CURSOR_HEIGHT * 2);
-
+			if (showSpotlight) {
+				cursorSpotlight = new SpotLight();
+				cursorSpotlight.setName("cursorSpotlight");
+				cursorSpotlight.setSpotRange(0);
+				cursorSpotlight.setDirection(Vector3f.UNIT_Y.mult(-1));
+				cursorSpotlight.setColor(cursorColor);
+				cursorSpotlight.setSpotOuterAngle(16 * FastMath.DEG_TO_RAD);
+				cursorSpotlight.setSpotInnerAngle(15 * FastMath.DEG_TO_RAD);
+				cursorSpotlight.setPosition(Vector3f.UNIT_Y.mult(CURSOR_HEIGHT * app.getWorldRenderScale()));
+				cursorSpotlight.setSpotRange(CURSOR_HEIGHT * 2 * app.getWorldRenderScale());
+			}
 			setCursorVisible(cursorVisible && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE); // force
 																																					// re-attach
 		}
@@ -688,14 +720,18 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		if (n != null && cursor != null) {
 			if (isVisible) {
 				if (!n.hasChild(cursor)) {
-//					System.out.println("adding cursor");
+					// System.out.println("adding cursor");
 					n.attachChild(cursor);
-					n.addLight(cursorSpotlight);
+					if (cursorSpotlight != null) {
+						n.addLight(cursorSpotlight);
+					}
 				}
 			} else if (app.getRootNode().hasChild(cursor)) {
-//				System.out.println("detaching cursor");
+				// System.out.println("detaching cursor");
 				n.detachChild(cursor);
-				n.removeLight(cursorSpotlight);
+				if (cursorSpotlight != null) {
+					n.removeLight(cursorSpotlight);
+				}
 			}
 		}
 	}
@@ -750,5 +786,9 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 
 	public void setInputModifiers(int inputModifiers) {
 		this.inputModifiers = inputModifiers;
+	}
+
+	public Tool getCurrentTool() {
+		return currentTool;
 	}
 }

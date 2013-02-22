@@ -7,21 +7,13 @@ public final class Terrain {
 	private Terrain() {
 	}
 
-	/**
-	 * The "edges" of any HeightMap are set to TERRAIN_MIN, in order to create
-	 * "walls" on the terrain (visually).
-	 * 
-	 * @param heightMap
-	 */
 	public static void trim(WorldState worldState) {
-		if (worldState != null) {
-//			System.out.println("TrimTerrain(worldState)");
-			HeightMap heightMap = worldState.getTerrainHeightMap();
+		if(worldState!=null){
+			trim(worldState.getTerrainHeightMap());
 		}
-
 	}
 
-	protected static void trim(AbstractHeightMap heightMap) {
+	protected static void trim(HeightMap heightMap) {
 		// drop the edges.
 		if (heightMap != null) {
 			int size = heightMap.getSize();

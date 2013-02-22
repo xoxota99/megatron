@@ -2,18 +2,18 @@ package com.skyline.application.events;
 
 import java.awt.*;
 
-public class TerrainChangedEvent extends AbstractEvent {
+public class TerrainEvent extends AbstractEvent {
 
 	private Point fromPoint = null;
 	private Point toPoint = null;
 	private boolean isNewTerrain;
 
-	public TerrainChangedEvent(Object source) {
+	public TerrainEvent(Object source) {
 		super(source);
-		this.eventType = EventType.TERRAIN;
+//		this.eventType = EventType.TERRAIN;
 	}
 
-	public TerrainChangedEvent(Object source, Point fromPoint, Point toPoint) {
+	public TerrainEvent(Object source, Point fromPoint, Point toPoint) {
 		this(source);
 		this.fromPoint = fromPoint;
 		this.toPoint = toPoint;

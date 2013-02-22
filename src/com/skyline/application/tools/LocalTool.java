@@ -6,18 +6,28 @@ import com.skyline.application.events.*;
 import com.skyline.model.*;
 
 public abstract class LocalTool implements Tool {
-	
+
 	protected String name;
 	protected String toolTipText;
 	protected CursorType cursorType;
-	protected float power; // The relative intensity of the effect of this tool, [0..1]
-	protected float radius; // The relative radius of the effect of this tool, [0..1]
+	protected float power; // The relative intensity of the effect of this tool,
+							// [0..1]
+	protected float radius; // The relative radius of the effect of this tool,
+							// [0..1]
 
 	protected LocalTool(String name, String toolTipText, CursorType cursorType) {
 		this.name = name;
 		this.toolTipText = toolTipText;
 		this.cursorType = cursorType;
 	}
+
+	public abstract float getMaxPower();
+
+	public abstract float getMinPower();
+
+	public abstract float getMaxRadius();
+
+	public abstract float getMinRadius();
 
 	/**
 	 * Execute this tool on the specified WorldState, in the specified location.
@@ -61,6 +71,12 @@ public abstract class LocalTool implements Tool {
 		return power;
 	}
 
+	/**
+	 * Set the "power", or magnitude of the tool's effect.
+	 * 
+	 * @param power
+	 *            the power to set, between 0 and 1.
+	 */
 	public void setPower(float power) {
 		this.power = power;
 	}
@@ -69,18 +85,26 @@ public abstract class LocalTool implements Tool {
 		return radius;
 	}
 
+	/**
+	 * Set the "radius", or area of the tool's effect.
+	 * 
+	 * @param radius
+	 *            the radius to set, between 0 and 1.
+	 */
 	public void setRadius(float radius) {
 		this.radius = radius;
 	}
 
 	@Override
 	public void update(Observable o, Object arg) {
-		if (o instanceof ToolSet) {	//TODO: This will actually be an instance of ToolSet. Which is probably wrong.
+		if (o instanceof ToolSet) { // TODO: This will actually be an instance
+									// of ToolSet. Which is probably wrong.
 			if (arg instanceof Event) {
 				if (((Event) arg).getSource() != this) {
-					//Hey! I received a ToolSet Event.
+					// Hey! I received a ToolSet Event.
 				} else {
-					//Hey! I received a ToolSet Event, but I'm the source, so I'll ignore it.
+					// Hey! I received a ToolSet Event, but I'm the source, so
+					// I'll ignore it.
 				}
 			} else {
 				System.out.println(arg.getClass().getName());

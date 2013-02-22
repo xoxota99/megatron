@@ -2,7 +2,6 @@ package com.skyline.application;
 
 import java.awt.*;
 import java.awt.image.*;
-import java.nio.*;
 import java.util.*;
 import java.util.List;
 
@@ -21,15 +20,19 @@ import com.jme3.system.*;
 import com.jme3.terrain.geomipmap.*;
 import com.jme3.terrain.heightmap.*;
 import com.jme3.texture.*;
-import com.jme3.texture.Image;
+import com.jme3.texture.Texture.MagFilter;
 import com.jme3.texture.Texture.MinFilter;
+import com.jme3.texture.Texture.ShadowCompareMode;
 import com.jme3.texture.Texture.WrapMode;
+import com.jme3.texture.Image;
+import com.jme3.texture.image.*;
 import com.jme3.texture.plugins.*;
 import com.jme3.util.*;
 import com.jme3.water.*;
 import com.skyline.application.events.*;
 import com.skyline.application.events.Event;
 import com.skyline.application.state.*;
+import com.skyline.application.tools.*;
 import com.skyline.model.*;
 import com.skyline.terrain.*;
 
@@ -102,7 +105,9 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	// don't create terrain higher than this.
 
 	// Where is the sun?
-	private Vector3f sunDir = new Vector3f(-0.4790551f, -0.39247334f, -0.7851566f);
+	// private Vector3f sunDir = new Vector3f(-0.48f, -0.39f, -0.79f);//sunset
+	// private Vector3f sunDir = new Vector3f(0f, -1f, 0f);//noon
+	private Vector3f sunDir = new Vector3f(-.5f, -.5f, -.5f);// afternoon
 	private Geometry water;
 
 	// private TerrainToolMode[] toolSet = { TerrainToolMode.NONE };
@@ -114,11 +119,11 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	public static void main(String... args) {
 		SimpleApplication app = new MegatronApplication();
 		app.setShowSettings(showSettings);
+		app.setDisplayStatView(false);
+		app.setDisplayFps(true);
 		if (!showSettings) {
 			AppSettings settings = getAppSettings();
 			app.setSettings(settings);
-			app.setDisplayStatView(false);
-			// app.setDisplayFps(true);
 		}
 		app.start();
 	}
@@ -243,7 +248,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 			}
 		}
 		Terrain.trim(worldState);
-		worldState.triggerChangeEvent(new TerrainChangedEvent(this, new Point(0, 0), new Point(originalHeightMap.getSize() - 1, originalHeightMap.getSize() - 1)));
+		worldState.triggerChangeEvent(new TerrainEvent(this, new Point(0, 0), new Point(originalHeightMap.getSize() - 1, originalHeightMap.getSize() - 1)));
 		// updateHeightQuad();
 	}
 
@@ -259,7 +264,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		}
 
 		Terrain.trim(worldState);
-		worldState.triggerChangeEvent(new TerrainChangedEvent(this, new Point(0, 0), new Point(terrainHeightMap.getSize() - 1, terrainHeightMap.getSize() - 1)));
+		worldState.triggerChangeEvent(new TerrainEvent(this, new Point(0, 0), new Point(terrainHeightMap.getSize() - 1, terrainHeightMap.getSize() - 1)));
 		// updateHeightQuad();
 
 	}
@@ -309,7 +314,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 			}
 		}
 		Terrain.trim(worldState);
-		worldState.triggerChangeEvent(new TerrainChangedEvent(this, new Point(0, 0), new Point(heightMap.getSize() - 1, heightMap.getSize() - 1)));
+		worldState.triggerChangeEvent(new TerrainEvent(this, new Point(0, 0), new Point(heightMap.getSize() - 1, heightMap.getSize() - 1)));
 		// updateHeightQuad();
 	}
 
@@ -318,7 +323,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		smoothGlobalHeight(terrainHeightMap, .5f, 6);
 		// resetMaxHeight();
 		Terrain.trim(worldState);
-		worldState.triggerChangeEvent(new TerrainChangedEvent(this, new Point(0, 0), new Point(terrainHeightMap.getSize() - 1, terrainHeightMap.getSize() - 1)));
+		worldState.triggerChangeEvent(new TerrainEvent(this, new Point(0, 0), new Point(terrainHeightMap.getSize() - 1, terrainHeightMap.getSize() - 1)));
 		// updateHeightQuad();
 	}
 
@@ -326,7 +331,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		AbstractHeightMap terrainHeightMap = (AbstractHeightMap) worldState.getTerrainHeightMap();
 		terrainHeightMap.flatten((byte) 2);
 		Terrain.trim(worldState);
-		worldState.triggerChangeEvent(new TerrainChangedEvent(this, new Point(0, 0), new Point(terrainHeightMap.getSize() - 1, terrainHeightMap.getSize() - 1)));
+		worldState.triggerChangeEvent(new TerrainEvent(this, new Point(0, 0), new Point(terrainHeightMap.getSize() - 1, terrainHeightMap.getSize() - 1)));
 		// updateHeightQuad();
 	}
 
@@ -369,54 +374,78 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		terrain.updateModelBound();
 	}
 
+	private void updateCursorRender() {
+		ToolAppState tas = stateManager.getState(ToolAppState.class);
+		if (tas != null && tas.getCurrentTool()!=null && tas.getCurrentTool() instanceof LocalTool) {
+			LocalTool lt=((LocalTool) tas.getCurrentTool());
+			float adj = worldState.getSize() / 2;
+			float rad = lt.getRadius();
+			float rad2 =  (ToolAppState.CURSOR_RENDER_RADIUS_MIN + (rad * (ToolAppState.CURSOR_RENDER_RADIUS_MAX-ToolAppState.CURSOR_RENDER_RADIUS_MIN))) / worldRenderScale;
+			
+			float pow = lt.getPower();
+			Vector3f cursorPos = tas.getCursorPosition().mult(1 / worldRenderScale).add(adj, 0, adj);
+			if (cursorPos != null) {
+				Texture cursorTex = (Texture) terrainMat.getParam("AlphaMap").getValue();
+				Image aImg = cursorTex.getImage(); // get the Image from the
+													// Texture
+				ImageRaster ir = ImageRaster.create(aImg);
+//				System.out.printf("width=%d, height=%d\n",ir.getWidth(),ir.getHeight());
+				for (int xx = 0; xx < ir.getWidth(); ++xx) {
+					for (int yy = 0; yy < ir.getHeight(); ++yy) {
+						float dx = cursorPos.x - xx;
+						float dy = cursorPos.z - yy;
+						float dist = (float) Math.sqrt((dx*dx)+(dy*dy));
+//						System.out.println("Power is "+(int) (pow * 0xff));
+						ColorRGBA c = ir.getPixel(xx, ir.getHeight() - 1 - yy);
+						if (dist<rad2) {
+							c.set(c.getRed(), c.getGreen(),pow*(1-(dist/(rad2))), c.getAlpha());
+						} else {
+							c.set(c.getRed(), c.getGreen(), 0x00, c.getAlpha());
+						}
+						ir.setPixel(xx, ir.getHeight() - 1 - yy, c);
+					}
+				}
+				// popMapTex.setImage(aImg); // set the Image back into the
+				// Texture
+				aImg.setUpdateNeeded();
+
+			}
+		}
+	}
+
 	private void updatePopDensityRender() {
 		float[][] pop = worldState.getPopDensity();
 		float maxPop = worldState.getMaxPop();
-		// 1-length-1, to leave the "edges" on.
+		// 1..length-1, to leave the "edges" on.
 		Texture popMapTex = (Texture) terrainMat.getParam("AlphaMap").getValue();
 		Image aImg = popMapTex.getImage(); // get the Image from the Texture
-		ByteBuffer aBuf = aImg.getData(0); // Get the image as a bytebuffer to
-											// read/write
-		int iW = aImg.getWidth();
+		ImageRaster ir = ImageRaster.create(aImg);
 
+		System.out.printf("width=%d, height=%d\n",ir.getWidth(),ir.getHeight());
 		for (int x = 1; x < pop.length - 1; x++) {
 			for (int y = 1; y < pop[x].length - 1; y++) {
-				int iP = (y * iW + x) * 4; // calculate the point in the buffer
-											// for the point we want
-				if (iP > aBuf.capacity() - 1) {
-					System.err.print("outside buffer!" + iW);
-					return;
-				}
-				aBuf.position(iP);
-				// for PopMap, we want to set opacity on layer 2.
-				int val = (int) ((pop[x][y] / maxPop) * 0xdd);
-
-				if (val > 0) {
-					System.out.printf("at (%d,%d), val = %d\n", x, y, val);
-				}
-				// aBuf.putInt(0x00ff00ff & val << 8);
-				aBuf.put((byte) 0xff); // layer 3
-				aBuf.put((byte) val); // <--- PopDensity layer is here.
-				aBuf.put((byte) 0xff); // layer 1
-				aBuf.put((byte) 0x00); // layer 0
+				// reverse y coordinates, for some reason.
+				ColorRGBA c = ir.getPixel(x, pop[x].length - 1 - y);
+				c.set(c.getRed(), pop[x][y] / maxPop, c.getBlue(), c.getAlpha());
+				ir.setPixel(x, pop[x].length - 1 - y, c);
 			}
 		}
-		aImg.setData(aBuf); // set the modified buffer back into the Image
-		popMapTex.setImage(aImg); // set the Image back into the Texture
-		popMapTex.getImage().setUpdateNeeded();
-		terrainMat.setTexture("AlphaMap", popMapTex); // set the Texture back
-														// into the Material
-		terrain.setMaterial(terrainMat); // set the Material back into the
-											// Terrain
+
+		// popMapTex.setImage(aImg); // set the Image back into the Texture
+		aImg.setUpdateNeeded();
+		// terrainMat.setTexture("AlphaMap", popMapTex); // set the Texture back
+		// into the Material
+		// terrain.setMaterial(terrainMat); // set the Material back into the
+		// Terrain
 	}
 
 	private void setupRandomPopulationMap(int popCenterCount) {
 		float[][] pop = worldState.getPopDensity();
 		Random r = new Random(System.currentTimeMillis());// worldState.getPopulationSeed());
-		for (int i = 0; i < popCenterCount-1; i++) {
+		for (int i = 0; i < popCenterCount - 1; i++) {
 			int x = r.nextInt(pop.length);
 			int y = r.nextInt(pop[x].length);
-			System.out.printf("Putting popDense at (%d,%d)\f", x, y);
+			// System.out.printf("Putting popDense at (%d,%d)\f", x, y);
 			int rad = r.nextInt(128);
 			for (int xx = Math.max(x - rad, 1); xx < Math.min(x + rad, pop.length - 1); xx++) {
 				for (int yy = Math.max(y - rad, 1); yy < Math.min(y + rad, pop[x].length - 1); yy++) {
@@ -431,26 +460,35 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	}
 
 	private Material setupLightedMaterial() {
-		float grassScale = 128;
+		float grassScale = 256;
+//		float cursorScale = 512;
 
 		Material retval = new Material(assetManager, "Common/MatDefs/Terrain/TerrainLighting.j3md");
 		// retval.setBoolean("useTriPlanarMapping", true);
-		retval.setFloat("Shininess", 0.0f);
+//		retval.setFloat("Shininess",1.0f);
+//		retval.setBoolean("isTerrainGrid",true);	//don't do this.
+		retval.setBoolean("WardIso",true);
 
 		// initially, we don't show the popMap. Generate an AlphaMap image.
-		BufferedImage bi = Util.getSolidColorImage(0x00ff00ff, worldState.getSize(), worldState.getSize());
+		// The AlphaMap is very low resolution.
+		BufferedImage bi = Util.getSolidColorImage(0x00ff0000, worldState.getSize(), worldState.getSize());
 		Image img = new AWTLoader().load(bi, false);
 		Texture pTex = (Texture) new Texture2D(img);
 
 		// Set the alpha blend between "layers".
 		retval.setTexture("AlphaMap", pTex);
 
-		// Grass goes on top. We have to put it on top if we want it to be "hit"
-		// by the spotlight cursor.
-		Texture grass = (Texture) new Texture2D(new AWTLoader().load(Util.getProceduralGridImage(0x354e30, 0x30492B, 16, 16), false));
+		// Texture grass =
+		// assetManager.loadTexture("Textures/Terrain/splat/grass.jpg");
+		Texture grass = assetManager.loadTexture("assets/textures/grass.png");
+		// Image grassImage = new
+		// AWTLoader().load(Util.getProceduralGridImage(0x354e30, 0x30492B, 16,
+		// 16), false);
+		// Texture grass = (Texture) new Texture2D(grassImage);
 		grass.setAnisotropicFilter(1);
 		grass.setMinFilter(MinFilter.Trilinear);
-//		Texture grass = assetManager.loadTexture("Textures/Terrain/splat/grass.jpg");
+		grass.setMagFilter(MagFilter.Bilinear);
+		grass.setShadowCompareMode(ShadowCompareMode.LessOrEqual);
 		grass.setWrap(WrapMode.Repeat);
 		retval.setTexture("DiffuseMap", grass);
 		retval.setFloat("DiffuseMap_0_scale", grassScale);
@@ -459,11 +497,20 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		// Note: The alpha channel in the diffusion map colors is ignored.
 		bi = Util.getSolidColorImage(0xF3816B, worldState.getSize(), worldState.getSize());
 		img = new AWTLoader().load(bi, false);
-		Texture popMapPink = (Texture) new Texture2D(img);
-
-		popMapPink.setWrap(WrapMode.Repeat);
-		retval.setTexture("DiffuseMap_1", popMapPink);
+		Texture popMapTex = (Texture) new Texture2D(img);
+		popMapTex.setWrap(WrapMode.Repeat);
+		retval.setTexture("DiffuseMap_1", popMapTex);
+		//TODO: Can I translate this texture, in the context of the material (See TerrainLighting.j3md )
 		retval.setFloat("DiffuseMap_1_scale", grassScale);
+
+		// Setup Blue "Cursor" layer. For rendering the mouse cursor against the
+		// terrain.
+		bi = Util.getSolidColorImage(0x0000ff, worldState.getSize(), worldState.getSize());
+		img = new AWTLoader().load(bi, false);
+		Texture cursorTex = (Texture) new Texture2D(img);
+		cursorTex.setWrap(WrapMode.Repeat);
+		retval.setTexture("DiffuseMap_2", cursorTex);
+		retval.setFloat("DiffuseMap_2_scale", grassScale);
 
 		return retval;
 
@@ -518,7 +565,11 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		this.flyCam.setMoveSpeed(worldState.getSize() * worldRenderScale / 4);
 		this.flyCam.setRotationSpeed(4);
 
-		this.getCamera().setLocation(new Vector3f(worldState.getSize() * worldRenderScale / 3, worldState.getSize() * worldRenderScale / 2, worldState.getSize() * worldRenderScale));
+		// this.getCamera().setLocation(new Vector3f(worldState.getSize() *
+		// worldRenderScale / 3, worldState.getSize() * worldRenderScale / 2,
+		// worldState.getSize() * worldRenderScale)); //bottom right corner /
+		// orthogonal
+		this.getCamera().setLocation(new Vector3f(0, worldState.getSize() * worldRenderScale / 2f, worldState.getSize() * worldRenderScale));
 		this.getCamera().lookAt(new Vector3f(0f, 0f, 0f), new Vector3f(0f, 1f, 0f));
 		this.getCamera().setFrustumFar(worldState.getSize() * worldRenderScale * 4);
 
@@ -606,34 +657,34 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		SimpleWaterProcessor waterProcessor = new SimpleWaterProcessor(assetManager);
 		waterProcessor.setReflectionScene(rootNode);
 		waterProcessor.setDebug(false);
-		waterProcessor.setLightPosition(sunDir.multLocal(-400));
+		waterProcessor.setLightPosition(sunDir.mult(-400));
 		waterProcessor.setRefractionClippingOffset(-100f);
 
 		// setting the water plane
 		// Vector3f waterLocation=new Vector3f(0,-20,0);
-		waterProcessor.setPlane(new Plane(Vector3f.UNIT_Y, 0)); // sets the
-																// plane of
-																// reflection
+		// waterProcessor.setPlane(new Plane(Vector3f.UNIT_Y, 0)); // sets the
+		// plane of
+		// reflection
 
-		waterProcessor.setWaterColor(ColorRGBA.Blue);
+		// waterProcessor.setWaterColor(ColorRGBA.Blue.mult(10f));
 		// waterProcessor.setDebug(true);
 		// lower render size for higher performance
 		waterProcessor.setRenderSize(128, 128);
 		// raise depth to see through water
 		waterProcessor.setWaterDepth(4);
 		// lower the distortion scale if the waves appear too strong
-		waterProcessor.setDistortionScale(0.1f);
+		waterProcessor.setDistortionScale(1f);
 		waterProcessor.setWaterTransparency(0f);
 		// lower the speed of the waves if they are too fast
 		waterProcessor.setWaveSpeed(0.05f);
 
+		// Create a Quad.
 		Quad quad = new Quad(worldState.getSize() * worldRenderScale * 0.99f, worldState.getSize() * worldRenderScale * 0.99f);
-
 		// the texture coordinates define the general size of the waves
-		quad.scaleTextureCoordinates(new Vector2f(6f, 6f));
+		quad.scaleTextureCoordinates(new Vector2f(16f, 16f));
 
 		water = new Geometry("water", quad);
-		water.setShadowMode(ShadowMode.Receive);
+		water.setShadowMode(ShadowMode.CastAndReceive);
 		water.setLocalRotation(new Quaternion().fromAngleAxis(-FastMath.HALF_PI, Vector3f.UNIT_X));
 		water.setMaterial(waterProcessor.getMaterial());
 		water.setLocalTranslation(-worldRenderScale * worldState.getSize() * 0.99f / 2, worldState.getWaterLevel(), worldRenderScale * worldState.getSize() * 0.99f / 2);
@@ -675,7 +726,13 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	}
 
 	private void setupSky() {
-		rootNode.attachChild(SkyFactory.createSky(assetManager, "Textures/Sky/Bright/BrightSky.dds", false));
+		// rootNode.attachChild(SkyFactory.createSky(assetManager,
+		// "Textures/Sky/Bright/BrightSky.dds", false));
+		Texture news = assetManager.loadTexture("assets/sky/news.png");
+		Texture up = assetManager.loadTexture("assets/sky/up.png");
+		Texture down = assetManager.loadTexture("assets/sky/down.png");
+
+		rootNode.attachChild(SkyFactory.createSky(assetManager, news, news, news, news, up, down));
 	}
 
 	private void setupLight() {
@@ -685,9 +742,9 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		sun.setColor(ColorRGBA.White.mult(2f));
 		rootNode.addLight(sun);
 
-//		AmbientLight ambLight = new AmbientLight();
-//		ambLight.setColor(ColorRGBA.White.mult(2f));
-//		rootNode.addLight(ambLight);
+		AmbientLight ambLight = new AmbientLight();
+		ambLight.setColor(ColorRGBA.White.mult(2f));
+		rootNode.addLight(ambLight);
 
 		// PssmShadowRenderer pssmRenderer = new
 		// PssmShadowRenderer(assetManager, 1024, 3);
@@ -713,8 +770,8 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		// setupMaterial();
 
 		setupTerrain();
-		setupRandomPopulationMap(5);
-		updatePopDensityRender();
+		// setupRandomPopulationMap(5);
+		// updatePopDensityRender();
 
 		setupWater();
 		// setupMesh();
@@ -767,26 +824,23 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	public void update(Observable o, Object arg) {
 		if (o instanceof WorldState) {
 			if (arg != null && arg instanceof Event) {
-				switch (((Event) arg).getEventType()) {
-				case TERRAIN:
-					TerrainChangedEvent evt = (TerrainChangedEvent) arg;
+				if (arg instanceof TerrainEvent) {
+					TerrainEvent tce = (TerrainEvent) arg;
 					// System.out.println("Terrain Event: isNewTerrain=" +
 					// evt.isNewTerrain());
-					if (evt.isNewTerrain()) {
+					if (tce.isNewTerrain()) {
 						reloadOriginalHeightMap();
 					}
 					updateHeightQuad();
-					break;
-				case POPULATION:
-					break;
-				case ROADS:
-					break;
-				case ZONING:
-					break;
-				case CONSTRUCTION:
-					break;
-				default:
-					System.out.println("Whoah. Unknown event type: " + ((Event) arg).getEventType().toString());
+				} else if (arg instanceof PopulationEvent) {
+					updatePopDensityRender();
+					// }else if(arg instanceof TransportationEvent) {
+					// }else if(arg instanceof ZoningEvent) {
+					// }else if(arg instanceof ConstructionEvent) {
+				} else if (arg instanceof MouseMoveEvent) {
+					updateCursorRender();
+				} else {
+					System.out.println("Whoah. Unknown event type: " + arg.getClass().getName());
 				}
 			}
 		}

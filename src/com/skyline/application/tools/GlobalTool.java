@@ -2,7 +2,6 @@ package com.skyline.application.tools;
 
 import java.util.*;
 
-import com.skyline.application.*;
 import com.skyline.application.events.*;
 import com.skyline.model.*;
 

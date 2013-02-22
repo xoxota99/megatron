@@ -26,7 +26,7 @@ public class GlobalRandomizationTool extends GlobalTool {
 		AbstractHeightMap terrainHeightMap = Terrain.createRandomHeightMap(worldState.getSize(), worldState.getMaxTerrainHeight(), seed);
 		worldState.setTerrainHeightMap(terrainHeightMap);
 		
-		TerrainChangedEvent evt=new TerrainChangedEvent(this);
+		TerrainEvent evt=new TerrainEvent(this);
 		evt.setNewTerrain(true);
 		worldState.triggerChangeEvent(evt);
 	}
