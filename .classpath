@@ -28,7 +28,11 @@
 	<classpathentry kind="lib" path="lib/jme3/nifty-style-black.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/nifty.jar" sourcepath="/jme3"/>
 	<classpathentry kind="lib" path="lib/jme3/stack-alloc.jar"/>
-	<classpathentry kind="lib" path="lib/jme3/vecmath.jar"/>
+	<classpathentry kind="lib" path="lib/jme3/vecmath.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://download.java.net/media/java3d/javadoc/1.3.2/javax/vecmath/package-summary.html"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="lib/jme3/xmlpull-xpp3.jar"/>
 	<classpathentry kind="lib" path="lib/jme3/jME3-testdata.jar"/>
 	<classpathentry kind="lib" path="lib/jts-1.13.jar" sourcepath="/jts-1.13"/>

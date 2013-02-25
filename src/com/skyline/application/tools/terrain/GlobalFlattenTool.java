@@ -61,7 +61,7 @@ public class GlobalFlattenTool extends GlobalTool {
 //            	float newVal=((heightData[i + j * size] - currentMin) / height) * value;
 //            	float oldVal = heightData[i + j * size];
 //            	if(oldVal<newVal){
-//            		System.out.printf("oldVal=%f, newVal=%f\n",oldVal,newVal);
+//            		RoadEngine.out.printf("oldVal=%f, newVal=%f\n",oldVal,newVal);
 //            	}
                 heightData[i + j * size] = ((heightData[i + j * size] - currentMin) / height) * value;
             }

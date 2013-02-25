@@ -28,7 +28,7 @@ public class LocalPopDensityTool extends LocalTool {
 	 */
 	@Override
 	public void execute(WorldState worldState, int x, int y, int modifiers) {
-		// System.out.println("execute");
+		// RoadEngine.out.println("execute");
 //		y=worldState.getSize()-y;
 		boolean isLowering = (modifiers & ToolAppState.ModifierKey.ALT) != 0;
 		float[][] popDensity = worldState.getPopDensity();
@@ -37,7 +37,7 @@ public class LocalPopDensityTool extends LocalTool {
 		float pow = (MIN_POWER + (power * (MAX_POWER - MIN_POWER))) * worldState.getSize() * (isLowering ? -1 : 1);
 		float rad = (MIN_RADIUS + (radius * (MAX_RADIUS - MIN_RADIUS))) * worldState.getSize();
 
-		// System.out.printf("rad = %f, pow=%f\n", rad, pow);
+		// RoadEngine.out.printf("rad = %f, pow=%f\n", rad, pow);
 		int xMin = (int) Math.floor(Math.max(x - rad, 1));
 		int xMax = (int) Math.floor(Math.min(x + rad, worldState.getSize() - 1));
 		int yMin = (int) Math.floor(Math.max(y - rad, 1));
@@ -53,7 +53,7 @@ public class LocalPopDensityTool extends LocalTool {
 					float oldVal = popDensity[xx][yy];
 					float newVal = Math.max(0, oldVal + delta); // TODO: bracket.
 
-					// System.out.printf("at (%d,%d), oH=%f, nH=%f\n", xx, yy,
+					// RoadEngine.out.printf("at (%d,%d), oH=%f, nH=%f\n", xx, yy,
 					// oldHeight, newHeight);
 					popDensity[xx][yy] = newVal;
 				}

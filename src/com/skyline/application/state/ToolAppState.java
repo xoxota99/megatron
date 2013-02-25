@@ -77,7 +77,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 
 	private boolean showCone = false;
 	private boolean showSpotlight = false;
-	private MegatronApplication app;
+	private SkylineApplication app;
 	// private BulletAppState physics;
 	// private int modifiers = 0;
 	private boolean toolPressed;
@@ -125,8 +125,8 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	@Override
 	public void initialize(AppStateManager stateManager, Application app) {
 
-		// System.out.println("initialize");
-		this.app = (MegatronApplication) app; // can cast Application to
+		// RoadEngine.out.println("initialize");
+		this.app = (SkylineApplication) app; // can cast Application to
 												// something
 												// more specific
 												// this.physics =
@@ -177,7 +177,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		worldState.addObserver(popTools);
 		toolBox.add(popTools);
 
-		// Street Tools
+		// Road Tools
 		ToolSet streetTools = new ToolSet("Streets");
 		worldState.addObserver(streetTools);
 		toolBox.add(streetTools);
@@ -257,7 +257,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		};
 
 		for (int i = 0; i < 10; i++) {
-			// System.out.println("handle key " + i + " = " + keyTrigs[i]);
+			// RoadEngine.out.println("handle key " + i + " = " + keyTrigs[i]);
 			inputManager.addMapping(INPUT_TOOL_SELECT_PREFIX + i, new KeyTrigger(toolTrigs[i]));
 			inputManager.addListener(this, INPUT_TOOL_SELECT_PREFIX + i);
 		}
@@ -321,7 +321,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	// enabled.
 	@Override
 	public void update(float tpf) {
-		// System.out.println(tpf);
+		// RoadEngine.out.println(tpf);
 		// Where is the cursor right now?
 		Vector3f newPos = calculateCursorPosition();
 //		if (!newPos.equals(cursorPosition)) {
@@ -350,7 +350,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			// ((CURSOR_RENDER_RADIUS_MAX - CURSOR_RENDER_RADIUS_MIN) * r);
 			float spotConeAngle = .2f + ((1.5f - .2f) * r);
 
-			// System.out.println("renderRadius=" + renderRadius);
+			// RoadEngine.out.println("renderRadius=" + renderRadius);
 			// // Vector3f loc = cursorPosition.add(0, CURSOR_RENDER_HEIGHT_MAX,
 			// // 0);
 			// // TODO: spotlight is always at the same Y, but changes angle for
@@ -370,9 +370,9 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			// float spotOuterAngle = (float) Math.acos(cosA);
 			// float spotInnerAngle = spotOuterAngle * 0.8f;
 			//
-			// System.out.printf("spotOuterAngle is %f\n", spotOuterAngle);
+			// RoadEngine.out.printf("spotOuterAngle is %f\n", spotOuterAngle);
 
-			// System.out.println("power is " + p);
+			// RoadEngine.out.println("power is " + p);
 			if (cursorSpotlight != null) {
 				cursorSpotlight.setSpotOuterAngle(spotConeAngle);
 				cursorSpotlight.setSpotInnerAngle(spotConeAngle * .8f);
@@ -389,7 +389,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			// Translate rendering coordinates into Map coordinates.
 			int cursorX = (int) ((pos.x / app.getWorldRenderScale()) + (worldState.getSize() / 2));
 			int cursorY = (int) ((pos.z / app.getWorldRenderScale()) + (worldState.getSize() / 2));
-			// System.out.printf("(%d,%d)\n",cursorX,cursorY);
+			// RoadEngine.out.printf("(%d,%d)\n",cursorX,cursorY);
 			((LocalTool) t).execute(worldState, cursorX, cursorY, inputModifiers);
 		} else if (t instanceof GlobalTool) {
 			((GlobalTool) t).execute(worldState, inputModifiers);
@@ -441,10 +441,10 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	public void onAction(String name, boolean value, float tpf) {
 		if (!looking) {
 			float inc = .05f;
-			// System.out.println("not Looking. So processing " + name + ", " +
+			// RoadEngine.out.println("not Looking. So processing " + name + ", " +
 			// value);
 			if (name.equals(INPUT_TOOL)) { // Use your tool.
-				// System.out.println("Use your tool.");
+				// RoadEngine.out.println("Use your tool.");
 				toolPressed = value;
 				if (toolPressed && currentTool != null && cursorPosition != null) {
 					applyTool(currentTool, worldState, cursorPosition);
@@ -473,13 +473,13 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) {
 					LocalTool t = (LocalTool) currentTool;
 					if (getInputModifier(ModifierKey.ALT)) {
-						// System.out.println("Decrease Power.");
+						// RoadEngine.out.println("Decrease Power.");
 						// ((LocalTool) currentTool).setPower((int)
 						// Math.max(((LocalTool) currentTool).getPower() - 1,
 						// CURSOR_RENDER_HEIGHT_MIN));
 						((LocalTool) currentTool).setPower(Math.max(((LocalTool) currentTool).getPower() - inc, 0f));
 					} else {
-						// System.out.println("Decrease Radius.");
+						// RoadEngine.out.println("Decrease Radius.");
 						// ((LocalTool) currentTool).setRadius((int)
 						// Math.max(((LocalTool) currentTool).getRadius() - 1,
 						// CURSOR_RENDER_RADIUS_MIN));
@@ -491,13 +491,13 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 				if ((currentTool != null && currentTool instanceof LocalTool && ((LocalTool) currentTool).getCursorType() != CursorType.NONE)) {
 					LocalTool t = (LocalTool) currentTool;
 					if (getInputModifier(ModifierKey.ALT)) {
-						// System.out.println("Increase Power.");
+						// RoadEngine.out.println("Increase Power.");
 						// ((LocalTool) currentTool).setPower((int)
 						// Math.min(((LocalTool) currentTool).getPower() + 1,
 						// CURSOR_RENDER_HEIGHT_MAX));
 						((LocalTool) currentTool).setPower(Math.min(((LocalTool) currentTool).getPower() + inc, 1f));
 					} else {
-						// System.out.println("Increase Radius.");
+						// RoadEngine.out.println("Increase Radius.");
 						// ((LocalTool) currentTool).setRadius((int)
 						// Math.min(((LocalTool) currentTool).getRadius() + 1,
 						// CURSOR_RENDER_RADIUS_MAX));
@@ -507,7 +507,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 				}
 			}
 			// } else {
-			// System.out.println("Looking, so ignoring input " + name + ", " +
+			// RoadEngine.out.println("Looking, so ignoring input " + name + ", " +
 			// value);
 		}
 		if (name.equals(MOD_SHIFT)) {
@@ -520,7 +520,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			toggleWireframe();
 		} else if (name.equals("FLYCAM_RotateDrag")) {
 			if (looking != value) {
-				// System.out.println("Looking = " + value);
+				// RoadEngine.out.println("Looking = " + value);
 				looking = value;
 				if (looking) {
 					// hide the cursor.
@@ -539,7 +539,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	 * Refresh the cursor with the current power and radius.
 	 */
 	private void updateCursorGeometry() {
-		// System.out.println("updateCursorGeometry");
+		// RoadEngine.out.println("updateCursorGeometry");
 		if (currentTool != null && currentTool instanceof LocalTool) {
 			if (cursor == null) {
 				setupCursor();
@@ -561,23 +561,23 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 				cursorNormal.setLocalTranslation(0, -CURSOR_HEIGHT * app.getWorldRenderScale(), 0);
 				cursorNormal.setLocalScale(CURSOR_HEIGHT * app.getWorldRenderScale());
 
-				// System.out.printf("renderHeight: %f", renderHeight);
+				// RoadEngine.out.printf("renderHeight: %f", renderHeight);
 
-				// System.out.println("renderRadius = " + renderRadius);
+				// RoadEngine.out.println("renderRadius = " + renderRadius);
 				// float a = renderRadius;
-				// System.out.println("a=" + a);
+				// RoadEngine.out.println("a=" + a);
 				// float b = (float) Math.sqrt((renderRadius * renderRadius / 4)
 				// + (renderHeight * renderHeight));
-				// System.out.println("b=" + b);
+				// RoadEngine.out.println("b=" + b);
 				// float c = b;
-				// System.out.println("c=" + c);
+				// RoadEngine.out.println("c=" + c);
 				// float cosA = ((b * b) + (c * c) - (a * a)) / (2 * b * c);
-				// System.out.println("cosA=" + cosA);
+				// RoadEngine.out.println("cosA=" + cosA);
 				// float A = (float) Math.acos(cosA);
-				// System.out.println("A=" + A + " (in Degrees, that's " + (A *
+				// RoadEngine.out.println("A=" + A + " (in Degrees, that's " + (A *
 				// FastMath.RAD_TO_DEG) + ")");
 				//
-				// System.out.printf("@height %f, angle = %f\n", renderHeight,
+				// RoadEngine.out.printf("@height %f, angle = %f\n", renderHeight,
 				// A);
 
 				// cursorSpotlight.setSpotOuterAngle(renderRadius *
@@ -596,7 +596,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	}
 
 	private void setupCursor() {
-		// System.out.println("setupCursor");
+		// RoadEngine.out.println("setupCursor");
 
 		if (currentTool != null && currentTool instanceof LocalTool) {
 			// float renderHeight = CURSOR_RENDER_HEIGHT_MIN +
@@ -642,7 +642,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			lightMark.setLocalTranslation(0, 0, 0);
 			cursor.attachChild(lightMark);
 
-			// System.out.printf("renderHeight: %f", renderHeight);
+			// RoadEngine.out.printf("renderHeight: %f", renderHeight);
 
 			if (showSpotlight) {
 				cursorSpotlight = new SpotLight();
@@ -694,7 +694,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 			// CollisionResult hit = results.getClosestCollision();
 			// return hit.getContactPoint();
 		}
-		// System.out.println("No Collision. Extrapolating to XZ-plane.");
+		// RoadEngine.out.println("No Collision. Extrapolating to XZ-plane.");
 		Vector3f holder = Vector3f.ZERO;
 		Plane basePlane = new Plane(Vector3f.UNIT_Y, WorldState.TERRAIN_MIN * app.getHeightScale());
 		if (ray.intersectsWherePlane(basePlane, holder)) {
@@ -720,14 +720,14 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 		if (n != null && cursor != null) {
 			if (isVisible) {
 				if (!n.hasChild(cursor)) {
-					// System.out.println("adding cursor");
+					// RoadEngine.out.println("adding cursor");
 					n.attachChild(cursor);
 					if (cursorSpotlight != null) {
 						n.addLight(cursorSpotlight);
 					}
 				}
 			} else if (app.getRootNode().hasChild(cursor)) {
-				// System.out.println("detaching cursor");
+				// RoadEngine.out.println("detaching cursor");
 				n.detachChild(cursor);
 				if (cursorSpotlight != null) {
 					n.removeLight(cursorSpotlight);
@@ -745,7 +745,7 @@ public class ToolAppState extends AbstractAppState implements ActionListener {
 	}
 
 	public void setCursorPosition(Vector3f cursorPosition) {
-		// System.out.println(String.format("setCursorPosition (%d,%d,%d)",
+		// RoadEngine.out.println(String.format("setCursorPosition (%d,%d,%d)",
 		// cursorPosition.x, cursorPosition.y, cursorPosition.z));
 		this.cursorPosition = cursorPosition;
 	}

@@ -21,7 +21,7 @@ public class GlobalZeroTool extends GlobalTool {
 	@Override
 	public void execute(WorldState worldState, int modifiers) {
 		System.out.println("Zero out");
-//		long seed = System.currentTimeMillis();
+//		long seed = RoadEngine.currentTimeMillis();
 //		worldState.setTerrainSeed(seed);
 		worldState.setMaxTerrainHeight(WorldState.TERRAIN_MAX_INIT);
 		AbstractHeightMap terrainHeightMap = Terrain.createHeightMap(worldState.getSize(), worldState.getWaterLevel()+1);

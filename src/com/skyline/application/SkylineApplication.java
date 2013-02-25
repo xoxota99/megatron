@@ -41,22 +41,22 @@ import com.skyline.terrain.*;
  * @author philippd
  * 
  */
-public class MegatronApplication extends SimpleApplication implements ActionListener, Observer {
+public class SkylineApplication extends SimpleApplication implements ActionListener, Observer {
 
 	private static boolean showSettings = true;
 
-	protected static final String INPUT_GLOBAL_SMOOTH = MegatronApplication.class.getName() + ".INPUT_GLOBAL_SMOOTH";
+	protected static final String INPUT_GLOBAL_SMOOTH = SkylineApplication.class.getName() + ".INPUT_GLOBAL_SMOOTH";
 	// protected static final String INPUT_GENERATE_TERRAIN =
-	// MegatronApplication.class.getName() + ".INPUT_GENERATE_TERRAIN";
-	protected static final String INPUT_GLOBAL_ERODE = MegatronApplication.class.getName() + ".INPUT_GLOBAL_ERODE";
-	protected static final String INPUT_RESET = MegatronApplication.class.getName() + ".INPUT_RESET";
+	// SkylineApplication.class.getName() + ".INPUT_GENERATE_TERRAIN";
+	protected static final String INPUT_GLOBAL_ERODE = SkylineApplication.class.getName() + ".INPUT_GLOBAL_ERODE";
+	protected static final String INPUT_RESET = SkylineApplication.class.getName() + ".INPUT_RESET";
 	// protected static final String INPUT_GLOBAL_NORMALIZE =
-	// MegatronApplication.class.getName() + ".INPUT_GLOBAL_NORMALIZE";
-	protected static final String INPUT_WIREFRAME = MegatronApplication.class.getName() + ".INPUT_WIREFRAME";
-	protected static final String INPUT_GLOBAL_RAISE = MegatronApplication.class.getName() + ".INPUT_GLOBAL_RAISE";
-	protected static final String INPUT_GLOBAL_LOWER = MegatronApplication.class.getName() + ".INPUT_GLOBAL_LOWER";
+	// SkylineApplication.class.getName() + ".INPUT_GLOBAL_NORMALIZE";
+	protected static final String INPUT_WIREFRAME = SkylineApplication.class.getName() + ".INPUT_WIREFRAME";
+	protected static final String INPUT_GLOBAL_RAISE = SkylineApplication.class.getName() + ".INPUT_GLOBAL_RAISE";
+	protected static final String INPUT_GLOBAL_LOWER = SkylineApplication.class.getName() + ".INPUT_GLOBAL_LOWER";
 	// protected static final String INPUT_GLOBAL_ZERO =
-	// MegatronApplication.class.getName() + ".INPUT_GLOBAL_ZERO";
+	// SkylineApplication.class.getName() + ".INPUT_GLOBAL_ZERO";
 
 	// private int modifiers = 0;
 	// private TerrainToolMode toolMode = TerrainToolMode.NONE;
@@ -117,7 +117,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	// private ToolsetAppState toolsetAppState = null;
 
 	public static void main(String... args) {
-		SimpleApplication app = new MegatronApplication();
+		SimpleApplication app = new SkylineApplication();
 		app.setShowSettings(showSettings);
 		app.setDisplayStatView(false);
 		app.setDisplayFps(true);
@@ -164,7 +164,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 													// resolution.
 													// for (DisplayMode m :
 													// modes) {
-		// System.out.printf("%dx%dx%d @ %d\n", m.getWidth(), m.getHeight(),
+		// RoadEngine.out.printf("%dx%dx%d @ %d\n", m.getWidth(), m.getHeight(),
 		// m.getBitDepth(), m.getRefreshRate());
 		// }
 		AppSettings settings = new AppSettings(true);
@@ -173,7 +173,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		settings.setBitsPerPixel(mode.getBitDepth());
 		settings.setFrequency(mode.getRefreshRate());
 		settings.setResolution(mode.getWidth(), mode.getHeight());
-		// System.out.println(mode.getRefreshRate());
+		// RoadEngine.out.println(mode.getRefreshRate());
 		return settings;
 	}
 
@@ -233,7 +233,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	// }
 
 	private void resetTerrain() {
-		// System.out.println("Reset!");
+		// RoadEngine.out.println("Reset!");
 		// HeightMap originalHeightMap = worldState.getOriginalHeightMap();
 		HeightMap terrainHeightMap = worldState.getTerrainHeightMap();
 		int size = originalHeightMap.getSize();
@@ -351,7 +351,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 	 * Update the TerrainQuad to render the current values of the heightMap.
 	 */
 	private void updateHeightQuad() {
-		// System.out.println("UpdateHeightQuad");
+		// RoadEngine.out.println("UpdateHeightQuad");
 		AbstractHeightMap terrainHeightMap = (AbstractHeightMap) worldState.getTerrainHeightMap();
 
 		List<Vector2f> xz = new ArrayList<Vector2f>();
@@ -389,13 +389,13 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 				Image aImg = cursorTex.getImage(); // get the Image from the
 													// Texture
 				ImageRaster ir = ImageRaster.create(aImg);
-//				System.out.printf("width=%d, height=%d\n",ir.getWidth(),ir.getHeight());
+//				RoadEngine.out.printf("width=%d, height=%d\n",ir.getWidth(),ir.getHeight());
 				for (int xx = 0; xx < ir.getWidth(); ++xx) {
 					for (int yy = 0; yy < ir.getHeight(); ++yy) {
 						float dx = cursorPos.x - xx;
 						float dy = cursorPos.z - yy;
 						float dist = (float) Math.sqrt((dx*dx)+(dy*dy));
-//						System.out.println("Power is "+(int) (pow * 0xff));
+//						RoadEngine.out.println("Power is "+(int) (pow * 0xff));
 						ColorRGBA c = ir.getPixel(xx, ir.getHeight() - 1 - yy);
 						if (dist<rad2) {
 							c.set(c.getRed(), c.getGreen(),pow*(1-(dist/(rad2))), c.getAlpha());
@@ -445,7 +445,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 		for (int i = 0; i < popCenterCount - 1; i++) {
 			int x = r.nextInt(pop.length);
 			int y = r.nextInt(pop[x].length);
-			// System.out.printf("Putting popDense at (%d,%d)\f", x, y);
+			// RoadEngine.out.printf("Putting popDense at (%d,%d)\f", x, y);
 			int rad = r.nextInt(128);
 			for (int xx = Math.max(x - rad, 1); xx < Math.min(x + rad, pop.length - 1); xx++) {
 				for (int yy = Math.max(y - rad, 1); yy < Math.min(y + rad, pop[x].length - 1); yy++) {
@@ -826,7 +826,7 @@ public class MegatronApplication extends SimpleApplication implements ActionList
 			if (arg != null && arg instanceof Event) {
 				if (arg instanceof TerrainEvent) {
 					TerrainEvent tce = (TerrainEvent) arg;
-					// System.out.println("Terrain Event: isNewTerrain=" +
+					// RoadEngine.out.println("Terrain Event: isNewTerrain=" +
 					// evt.isNewTerrain());
 					if (tce.isNewTerrain()) {
 						reloadOriginalHeightMap();

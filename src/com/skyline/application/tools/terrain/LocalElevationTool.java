@@ -36,14 +36,14 @@ public class LocalElevationTool extends LocalTool {
 	 */
 	@Override
 	public void execute(WorldState worldState, int x, int y, int modifiers) {
-//		 System.out.println("execute");
+		// RoadEngine.out.println("execute");
 		boolean isLowering = (modifiers & ToolAppState.ModifierKey.ALT) != 0;
 		HeightMap heightMap = worldState.getTerrainHeightMap();
 
 		float pow = (MIN_POWER + (power * (MAX_POWER - MIN_POWER))) * worldState.getSize() * (isLowering ? -1 : 1);
 		float rad = (MIN_RADIUS + (radius * (MAX_RADIUS - MIN_RADIUS))) * worldState.getSize();
 
-//		System.out.printf("rad = %f, pow=%f\n", rad, pow);
+		// RoadEngine.out.printf("rad = %f, pow=%f\n", rad, pow);
 		int xMin = (int) Math.floor(Math.max(x - rad, 1));
 		int xMax = (int) Math.floor(Math.min(x + rad, worldState.getSize() - 1));
 		int yMin = (int) Math.floor(Math.max(y - rad, 1));
@@ -52,14 +52,14 @@ public class LocalElevationTool extends LocalTool {
 			for (int xx = xMin; xx <= xMax; xx++) {
 				float dx = xx - x;
 				float dy = yy - y;
-//				double dist = Math.sqrt((dx * dx) + (dy * dy));
+				// double dist = Math.sqrt((dx * dx) + (dy * dy));
 				// see if it is in the radius of the tool
-				if ((dx * dx) + (dy * dy) <= rad*rad) {
+				if ((dx * dx) + (dy * dy) <= rad * rad) {
 					float dH = getValueDelta(rad, pow, dx, dy);
 					float oldHeight = heightMap.getTrueHeightAtPoint(xx, yy);
 					float newHeight = oldHeight + dH; // TODO: bracket.
 
-					// System.out.printf("at (%d,%d), oH=%f, nH=%f\n", xx, yy,
+					// RoadEngine.out.printf("at (%d,%d), oH=%f, nH=%f\n", xx, yy,
 					// oldHeight, newHeight);
 					heightMap.setHeightAtPoint(newHeight, xx, yy);
 				}
@@ -84,11 +84,41 @@ public class LocalElevationTool extends LocalTool {
 	 * @return
 	 */
 	private float getValueDelta(float radius, float multiplier, float x, float z) {
-//		System.out.println("getValueDelta");
+		// RoadEngine.out.println("getValueDelta");
 		Vector2f point = new Vector2f(x, z);
 		float xVal = point.length() / radius;
-		float yVal = (float) (Math.cos(xVal * Math.PI) + 1) / 2;
+		float yVal = smoothStep(xVal);
 		return multiplier * yVal;
+	}
+
+	/**
+	 * "Smoothstep" interpolation. (http://sol.gfxile.net/interpolation/#c4)
+	 * 
+	 * @param xVal
+	 */
+	private float smoothStep(float xVal) {
+		float yVal = ((xVal * xVal) * (3 - (2 * xVal)));
+		return 1 - yVal;
+	}
+
+	/**
+	 * Linear Interpolate
+	 * 
+	 * @param xVal
+	 * @return
+	 */
+	private float lerp(float xVal) {
+		return xVal;
+	}
+
+	/**
+	 * Cosine interpolation
+	 * 
+	 * @param xVal
+	 * @return
+	 */
+	private float cosInterpolate(float xVal) {
+		return (float) (Math.cos(xVal * Math.PI) + 1) / 2;
 	}
 
 	@Override

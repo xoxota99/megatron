@@ -18,7 +18,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Foobar; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ *  Foundation, Inc., 51 Franklin Road, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
 package com.skyline.util;
@@ -29,17 +29,17 @@ public final strictfp class Utils {
 
 	public final static float intToRed(int color) {
 		int red = (color >> 16) & 0xff;
-		return ((float)red)/255;
+		return ((float) red) / 255;
 	}
 
 	public final static float intToGreen(int color) {
 		int green = (color >> 8) & 0xff;
-		return ((float)green)/255;
+		return ((float) green) / 255;
 	}
 
 	public final static float intToBlue(int color) {
 		int blue = color & 0xff;
-		return ((float)blue)/255;
+		return ((float) blue) / 255;
 	}
 
 	public final static boolean isPowerOf2(int n) {
@@ -58,20 +58,20 @@ public final strictfp class Utils {
 		byte[] line = new byte[width];
 		byte[] line2 = new byte[width];
 
-		for (int i = 0; i < height/2; i++) {
-			bytes.position(i*width);
+		for (int i = 0; i < height / 2; i++) {
+			bytes.position(i * width);
 			bytes.get(line);
-			bytes.position((height - i - 1)*width);
+			bytes.position((height - i - 1) * width);
 			bytes.get(line2);
-			bytes.position(i*width);
+			bytes.position(i * width);
 			bytes.put(line2);
-			bytes.position((height - i - 1)*width);
+			bytes.position((height - i - 1) * width);
 			bytes.put(line);
 		}
 	}
 
 	public final static int powerOf2Log2(int n) {
-		assert isPowerOf2(n): n + " is not a power of 2";
+		assert isPowerOf2(n) : n + " is not a power of 2";
 		for (int i = 0; i < 31; i++) {
 			if ((n & 1) == 1) {
 				return i;
@@ -79,6 +79,20 @@ public final strictfp class Utils {
 			n >>= 1;
 		}
 		return 0;
+	}
+
+	public static int hash(int key) {
+		key += ~(key << 15);
+		key ^= (key >> 10);
+		key += (key << 3);
+		key ^= (key >> 6);
+		key += ~(key << 11);
+		key ^= (key >> 16);
+		return key;
+	}
+
+	public static int hashXY(int x, int y, int seed) {
+		return hash(x ^ hash(y ^ seed));
 	}
 
 }

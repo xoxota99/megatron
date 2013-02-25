@@ -88,7 +88,7 @@ public class MainWindow {
 					int rgb = (val << 16)
 							| (val << 8)
 							| (val);
-					// System.out.println("redrawing");
+					// RoadEngine.out.println("redrawing");
 					imgMap.setRGB(x, z, rgb);
 				}
 			}
@@ -111,7 +111,7 @@ public class MainWindow {
 	// try {
 	// if (cmd.execute(worldState)) {
 	// // unlock the next pipeline step.
-	// System.out.println("Hey, we're done with '" + nextPipelineStep +
+	// RoadEngine.out.println("Hey, we're done with '" + nextPipelineStep +
 	// "'. What comes next?");
 	// updateView(worldState);
 	// }

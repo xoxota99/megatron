@@ -37,7 +37,7 @@ public class LocalSmoothTool extends LocalTool {
 	@Override
 	public void execute(WorldState worldState, int x, int y, int modifiers) {
 		boolean isRoughening = (modifiers & ToolAppState.ModifierKey.ALT) != 0;
-		// System.out.println("isRoughening="+isRoughening);
+		// RoadEngine.out.println("isRoughening="+isRoughening);
 		HeightMap heightMap = worldState.getTerrainHeightMap();
 
 		// unlike Elevation Adjustments, smoothing power is not affected by
@@ -45,7 +45,7 @@ public class LocalSmoothTool extends LocalTool {
 		float pow = (MIN_POWER + (power * (MAX_POWER - MIN_POWER))) * (isRoughening ? -1 : 1);
 		float rad = (MIN_RADIUS + (radius * (MAX_RADIUS - MIN_RADIUS))) * worldState.getSize();
 
-		// System.out.printf("rad = %f, pow=%f\n", rad, pow);
+		// RoadEngine.out.printf("rad = %f, pow=%f\n", rad, pow);
 		int xMin = (int) Math.floor(Math.max(x - rad, 1));
 		int xMax = (int) Math.floor(Math.min(x + rad, worldState.getSize() - 1));
 		int yMin = (int) Math.floor(Math.max(y - rad, 1));
@@ -61,7 +61,7 @@ public class LocalSmoothTool extends LocalTool {
 					int neighNumber = 0;
 					float neighAverage = 0;
 					// hunt for neighbors.
-					// System.out.println("Looking for neightbors.\n\n");
+					// RoadEngine.out.println("Looking for neightbors.\n\n");
 
 					int xMin2 = (int) Math.floor(Math.max(xx - rad, 1));
 					int xMax2 = (int) Math.floor(Math.min(xx + rad, worldState.getSize() - 1));
