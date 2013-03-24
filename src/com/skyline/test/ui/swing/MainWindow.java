@@ -1,31 +1,13 @@
 package com.skyline.test.ui.swing;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.EventQueue;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Image;
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
-import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.*;
 
-import javax.swing.Box;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
+import javax.swing.*;
 
-import com.oddlabs.procedurality.ChannelFactory;
-import com.oddlabs.procedurality.Utils;
-import com.oddlabs.procedurality.Terrain.Hill;
-import com.oddlabs.procedurality.Terrain.Mountain;
+import com.oddlabs.procedurality.*;
+import com.oddlabs.procedurality.Terrain.*;
 import com.skyline.model.*;
 import com.skyline.terrain.*;
 
@@ -67,8 +49,7 @@ public class MainWindow {
 		worldState = new WorldState();
 		ChannelFactory cf;
 		cf = new Mountain(worldState.getSize(), Utils.powerOf2Log2(worldState.getSize()) - 6, 0.5f, worldState.getTerrainSeed());
-		// cf = new
-		// Perlin(worldState.getSize(),worldState.getSize(),1,5,0.4f,10,worldState.getSeed(),Perlin.CUBIC,Perlin.WOOD2);
+		 cf = new Perlin(worldState.getSize(),worldState.getSize(),1,5,0.4f,10,worldState.getSeed(),Perlin.CUBIC,Perlin.WOOD2);
 		// cf = new Hill(worldState.getSize(), Hill.CIRCLE);
 		worldState.setTerrainHeightMap(Terrain.createRandomHeightMap(worldState.getSize(), 64f, worldState.getTerrainSeed()));
 	}

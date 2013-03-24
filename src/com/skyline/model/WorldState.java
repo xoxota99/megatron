@@ -4,6 +4,8 @@ import java.util.*;
 
 import com.jme3.terrain.heightmap.*;
 import com.skyline.application.events.*;
+import com.skyline.population.model.*;
+import com.skyline.transportation.model.quad.*;
 
 /**
  * WorldState holds (what else?) the state of the world. Tools and toolsets will
@@ -43,6 +45,13 @@ public class WorldState extends Observable {
 	private float waterLevel = 0f;
 	private float[][] popDensity = new float[size][size];
 	private float maxPop = 0f;
+
+	/*
+	 * Road construction stuff.
+	 */
+	private RoadQuad roadQuad = new RoadQuad(0, 0, size, size);
+	private Set<PopulationCenter> populationCenters;
+	private float[][] roadPatternMap = new float[size][size];
 
 	/**
 	 * Notify observers that something has changed.
@@ -137,7 +146,8 @@ public class WorldState extends Observable {
 	}
 
 	public void setWaterLevel(float waterLevel) {
-		this.waterLevel = waterLevel; //TODO: Zero out pop density in places that are below water.
+		this.waterLevel = waterLevel; // TODO: Zero out pop density in places
+										// that are below water.
 	}
 
 	public float[][] getPopDensity() {
@@ -147,7 +157,7 @@ public class WorldState extends Observable {
 
 	public void setPopDensity(float[][] popDensity) {
 		this.popDensity = popDensity;
-		//TODO: Zero out pop density in places that are below water.
+		// TODO: Zero out pop density in places that are below water.
 		updateMaxPop();
 	}
 
@@ -164,5 +174,17 @@ public class WorldState extends Observable {
 
 	public float getMaxPop() {
 		return maxPop;
+	}
+
+	public RoadQuad getRoadQuad() {
+		return roadQuad;
+	}
+
+	public void setRoadQuad(RoadQuad roadQuad) {
+		this.roadQuad = roadQuad;
+	}
+
+	public Set<PopulationCenter> getPopulationCenters() {
+		return populationCenters;
 	}
 }

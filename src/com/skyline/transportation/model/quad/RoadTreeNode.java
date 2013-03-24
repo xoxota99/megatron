@@ -31,7 +31,26 @@ public class RoadTreeNode {
 	}
 
 	/**
-	 * Add the specified RoadSegment to the RoadTree.
+	 * If all this node's children are empty, remove them.
+	 */
+	public void collapse() {
+		if (this.hasChildren) {
+			NW.collapse();
+			NE.collapse();
+			SE.collapse();
+			SW.collapse();
+
+			if ((NW.leaf == null && !NW.hasChildren)
+					&& (NE.leaf == null && !NE.hasChildren)
+					&& (SE.leaf == null && !SE.hasChildren)
+					&& (SW.leaf == null && !SW.hasChildren)) {
+				clear();
+			}
+		}
+	}
+
+	/**
+	 * Add the specified RoadSegment to the RoadQuad.
 	 * 
 	 * @param segment
 	 * @return true if the RoadTreeNode did not already contain this segment.
@@ -39,7 +58,8 @@ public class RoadTreeNode {
 	public boolean put(RoadSegment segment) {
 		put(segment.getStartPoint());
 		put(segment.getEndPoint());
-		return segments.add(segment);
+		RoadTreeNode ancestor = getFirstCommonAncestor(segment.getStartPoint(), segment.getEndPoint());
+		return ancestor.segments.add(segment);
 	}
 
 	/**
@@ -49,7 +69,7 @@ public class RoadTreeNode {
 	 */
 	boolean put(ControlPoint controlPoint) {
 		if (this.hasChildren) {
-			return getChild(controlPoint.getX(), controlPoint.getY()).put(controlPoint);
+			return getChild(controlPoint.x, controlPoint.y).put(controlPoint);
 		}
 		if (this.leaf == null) {
 			this.leaf = controlPoint;
@@ -61,37 +81,105 @@ public class RoadTreeNode {
 		}
 		// divide into 4 sub-nodes.
 		this.divide();
-		return getChild(controlPoint.getX(), controlPoint.getY()).put(controlPoint);
+		return getChild(controlPoint.x, controlPoint.y).put(controlPoint);
 	}
 
-	boolean remove(ControlPoint value) {
-		boolean retval = false;
-		if (this.hasChildren) {
-			retval = getChild(value.getX(), value.getY()).remove(value);
+	/**
+	 * Remove a segment from the RoadTree. If the endpoints of the segment have
+	 * no other segments attached to them, and removeEndPoints is set to true,
+	 * the endpoints will also be removed.
+	 * 
+	 * @param value
+	 * @param removeEndPoints
+	 * @return
+	 */
+	public boolean remove(RoadSegment value, boolean removeEndPoints) {
+		RoadTreeNode node = null;
+		if (value.getNode() != null && value.getNode().getSegments().contains(value)) {
+			// hey, we already know the node! That's handy.
+			node = value.getNode();
+		} else {
+			// ugh. brute force it.
+			node = getFirstCommonAncestor(value.getStartPoint(), value.getEndPoint());
 		}
+		node.getSegments().remove(value);
+		value.setNode(null);
+		// if (!node.getSegments().remove(value)) {
+		// return false;
+		// }
+
+		ControlPoint sp = get(value.getStartPoint());
+		ControlPoint ep = get(value.getEndPoint());
+
+		if (sp != null && ep != null) {
+			sp.getSegments().remove(value); // remove the segment from this
+											// ControlPoint's collection of
+											// segments.
+			ep.getSegments().remove(value);
+			if (removeEndPoints) {
+				if (sp.getSegments().size() == 0) {
+					remove(sp); // no other segments, so remove it.
+				}
+				if (ep.getSegments().size() == 0) {
+					remove(ep); // no other segments, so remove it.
+				}
+			}
+		} else {
+			return false;
+		}
+		return true;
+	}
+
+	private ControlPoint get(ControlPoint pt) {
+		if (pt.getNode() != null) {
+			return pt; // we are already referencing a node in the quad.
+		} else {
+			return get(pt.x, pt.y, ControlPoint.EPSILON); // Get the actual node
+															// from the tree.
+		}
+
+	}
+
+	public boolean remove(ControlPoint value) {
+		ControlPoint rem = null;
+		boolean retval = false;
+
+		if (this.hasChildren) {
+			retval = getChild(value.x, value.y).remove(value);
+			if (retval) {
+				collapse(); // clean up.
+			}
+		}
+
 		if (this.leaf != null && this.leaf.equals(value)) {
+			rem = this.leaf;
 			this.leaf.setNode(null);
 			this.leaf = null;
 			retval = true;
-		}
-
-		if (retval) {
-			// we found the ControlPoint, now look for a Road containing this
-			// point, and remove that as well.
-			if (this.segments.size() > 0) {
-				// TODO: This is suboptimal, since ancestor nodes will also
-				// search their collection of segments.
-				for (RoadSegment seg : this.segments) {
-					if (seg.getStartPoint().equals(value)) {
-						this.segments.remove(seg);
-						remove(seg.getEndPoint());
-					}
-					if (seg.getEndPoint().equals(value)) {
-						this.segments.remove(seg);
-						remove(seg.getStartPoint());
+			// we found the ControlPoint, now cycle through this ControlPoint's
+			// segments, and remove them as well.
+			for (RoadSegment seg : rem.getSegments()) {
+				if (seg.getNode() != null) {
+					// find the "other end" of this segment, and remove it,
+					// if it has no other segments attached.
+					if (seg.getStartPoint().equals(rem)) { // we are the start
+															// point.
+						seg.getEndPoint().getSegments().remove(seg);
+						// Note: We only remove the other end of this
+						// segment if it has no other segments attached to it.
+						if (seg.getEndPoint().getSegments().size() > 0) {
+							seg.getNode().remove(seg.getEndPoint());
+						}
+					} else { // we are the end point.
+						seg.getStartPoint().getSegments().remove(seg);
+						if (seg.getStartPoint().getSegments().size() > 0) {
+							seg.getNode().remove(seg.getStartPoint());
+						}
 					}
 				}
+				seg.getNode().segments.remove(seg);
 			}
+
 		}
 		return retval;
 	}
@@ -110,6 +198,8 @@ public class RoadTreeNode {
 			this.NE = null;
 			this.SE = null;
 			this.SW = null;
+			this.segments.clear(); // obviously, if we have no children, we
+									// can't have any segments.
 			this.hasChildren = false;
 		} else {
 			if (this.leaf != null) {
@@ -154,8 +244,8 @@ public class RoadTreeNode {
 		}
 		if (this.leaf != null) {
 			double distance = Math.sqrt(
-					(this.leaf.getX() - x) * (this.leaf.getX() - x)
-							+ (this.leaf.getY() - y) * (this.leaf.getY() - y));
+					(this.leaf.x - x) * (this.leaf.x - x)
+							+ (this.leaf.y - y) * (this.leaf.y - y));
 			if (distance < bestDistance) {
 				bestDistance = distance;
 				return this.leaf;
@@ -182,8 +272,8 @@ public class RoadTreeNode {
 		}
 		if (this.leaf != null) {
 			double distance = Math.sqrt(
-					(this.leaf.getX() - x) * (this.leaf.getX() - x)
-							+ (this.leaf.getY() - y) * (this.leaf.getY() - y));
+					(this.leaf.x - x) * (this.leaf.x - x)
+							+ (this.leaf.y - y) * (this.leaf.y - y));
 			if (distance <= maxDistance) {
 				values.add(this.leaf);
 			}
@@ -207,13 +297,13 @@ public class RoadTreeNode {
 			}
 			return values;
 		}
-		if (this.leaf != null && bounds.contains(this.leaf.getX(), this.leaf.getY())) {
+		if (this.leaf != null && bounds.contains(this.leaf.x, this.leaf.y)) {
 			values.add(this.leaf);
 		}
 		return values;
 	}
 
-	public int execute(Box globalBounds, RoadTree.Executor executor) {
+	public int execute(Box globalBounds, RoadQuad.Executor executor) {
 		int count = 0;
 		if (this.hasChildren) {
 			if (this.NW.bounds.intersects(globalBounds)) {
@@ -230,13 +320,16 @@ public class RoadTreeNode {
 			}
 			return count;
 		}
-		if (this.leaf != null && globalBounds.contains(this.leaf.getX(), this.leaf.getY())) {
+		if (this.leaf != null && globalBounds.contains(this.leaf.x, this.leaf.y)) {
 			++count;
-			executor.execute(this.leaf.getX(), this.leaf.getY(), this.leaf);
+			executor.execute(this.leaf.x, this.leaf.y, this.leaf);
 		}
 		return count;
 	}
 
+	/**
+	 * Create new child nodes.
+	 */
 	private void divide() {
 		Box b = this.bounds;
 		this.NW = new RoadTreeNode(b.getMinX(), b.getCenterY(), b.getCenterX(), b.getMaxY());
@@ -245,7 +338,7 @@ public class RoadTreeNode {
 		this.SW = new RoadTreeNode(b.getMinX(), b.getMinY(), b.getCenterX(), b.getCenterY());
 		this.hasChildren = true;
 		if (this.leaf != null) {
-			RoadTreeNode nd = getChild(this.leaf.getX(), this.leaf.getY());
+			RoadTreeNode nd = getChild(this.leaf.x, this.leaf.y);
 			nd.put(this.leaf);
 			this.leaf.setNode(nd);
 			this.leaf = null;
@@ -286,7 +379,7 @@ public class RoadTreeNode {
 	public boolean nextLeaf(ControlPoint currentLeaf, ControlPoint nextLeaf) {
 		if (this.hasChildren) {
 			boolean found = false;
-			if (currentLeaf.getX() <= this.bounds.getCenterX() && currentLeaf.getY() <= this.bounds.getCenterY()) {
+			if (currentLeaf.x <= this.bounds.getCenterX() && currentLeaf.y <= this.bounds.getCenterY()) {
 				found = this.SW.nextLeaf(currentLeaf, nextLeaf);
 				if (found) {
 					if (nextLeaf == null) {
@@ -301,7 +394,7 @@ public class RoadTreeNode {
 					return true;
 				}
 			}
-			if (currentLeaf.getX() <= this.bounds.getCenterX() && currentLeaf.getY() >= this.bounds.getCenterY()) {
+			if (currentLeaf.x <= this.bounds.getCenterX() && currentLeaf.y >= this.bounds.getCenterY()) {
 				found = this.NW.nextLeaf(currentLeaf, nextLeaf);
 				if (found) {
 					if (nextLeaf == null) {
@@ -313,7 +406,7 @@ public class RoadTreeNode {
 					return true;
 				}
 			}
-			if (currentLeaf.getX() >= this.bounds.getCenterX() && currentLeaf.getY() <= this.bounds.getCenterY()) {
+			if (currentLeaf.x >= this.bounds.getCenterX() && currentLeaf.y <= this.bounds.getCenterY()) {
 				found = this.SE.nextLeaf(currentLeaf, nextLeaf);
 				if (found) {
 					if (nextLeaf == null) {
@@ -322,7 +415,7 @@ public class RoadTreeNode {
 					return true;
 				}
 			}
-			if (currentLeaf.getX() >= this.bounds.getCenterX() && currentLeaf.getY() >= this.bounds.getCenterY()) {
+			if (currentLeaf.x >= this.bounds.getCenterX() && currentLeaf.y >= this.bounds.getCenterY()) {
 				return this.NE.nextLeaf(currentLeaf, nextLeaf);
 			}
 			return false;
@@ -340,6 +433,16 @@ public class RoadTreeNode {
 		return nextLeaf;
 	}
 
+	/**
+	 * Return the RoadTreeNode that is the first common ancestor of the
+	 * specified points.
+	 * 
+	 * @param x1
+	 * @param y1
+	 * @param x2
+	 * @param y2
+	 * @return
+	 */
 	public RoadTreeNode getFirstCommonAncestor(double x1, double y1, double x2, double y2) {
 		if (this.hasChildren) {
 			RoadTreeNode n1 = this.getChild(x1, y1);
@@ -347,20 +450,57 @@ public class RoadTreeNode {
 			if (n1 == n2) {
 				// n1 is A common ancestor, but is it THE FIRST?
 				return n1.getFirstCommonAncestor(x1, y1, x2, y2);
+			} else if (n1 != null && n2 != null) {
+				return this; // n1 and n2 are different, but they're both my
+								// children, so I must be THE FIRST Common
+								// Ancestor.
 			} else {
-				return this; // n1 and n2 are different, but they're not my
-								// children, so I must be THE FIRST.
+				// at least one of the points could not be found among my
+				// children, so I am not a common ancestor.
+				return null;
 			}
 		}
 		return null; // No children, so I can't be an ancestor.
 	}
 
-	// TODO: Test this.
 	public RoadTreeNode getFirstCommonAncestor(ControlPoint point1, ControlPoint point2) {
-		return getFirstCommonAncestor(point1.getX(), point1.getY(), point2.getX(), point2.getY());
+		return getFirstCommonAncestor(point1.x, point1.y, point2.x, point2.y);
 	}
 
 	public Set<RoadSegment> getSegments() {
 		return segments;
+	}
+
+	/**
+	 * Return the Set of all existing RoadSegments that are completely contained
+	 * in the specified bounds.
+	 * 
+	 * @param minX
+	 * @param minY
+	 * @param maxX
+	 * @param maxY
+	 * @return
+	 */
+	public Set<RoadSegment> getContainedSegments(double minX, double minY, double maxX, double maxY) {
+		Set<RoadSegment> retval = new TreeSet<RoadSegment>();
+		if (hasChildren) {
+			retval.addAll(SW.getContainedSegments(minX, minY, maxX, maxY));
+			retval.addAll(NW.getContainedSegments(minX, minY, maxX, maxY));
+			retval.addAll(SE.getContainedSegments(minX, minY, maxX, maxY));
+			retval.addAll(NE.getContainedSegments(minX, minY, maxX, maxY));
+		}
+		// retval now contains all valid child segments. Now add my own.
+		Box b = new Box(minX, minY, maxX, maxY);
+		for (RoadSegment seg : this.segments) {
+			if (b.contains(seg.getStartPoint().x, seg.getStartPoint().y)
+					&& b.contains(seg.getEndPoint().x, seg.getEndPoint().y)) {
+				retval.add(seg);
+			}
+		}
+		return retval;
+	}
+
+	public Set<RoadSegment> getAllSegments() {
+		return getContainedSegments(this.bounds.getMinX(), this.bounds.getMinY(), this.bounds.getMaxX(), this.bounds.getMaxY());
 	}
 }

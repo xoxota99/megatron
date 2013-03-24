@@ -35,8 +35,10 @@ public class Box {
 	}
 
 	public Box(double minX, double minY, double maxX, double maxY) {
-		this.minX = minX;
-		this.minY = minY;
+		setMinX(minX);
+		setMinY(minY);
+		setMaxX(maxX);
+		setMaxY(maxY);
 	}
 
 	public Box getBounds() {
@@ -47,16 +49,26 @@ public class Box {
 		return minX;
 	}
 
-	public void setMinX(double x) {
-		this.minX = x;
+	public void setMinX(double minX) {
+		if (minX > this.maxX) {
+			this.minX = this.maxX;
+			this.maxX = minX;
+		} else {
+			this.minX = minX;
+		}
 	}
 
 	public double getMinY() {
 		return minY;
 	}
 
-	public void setMinY(double y) {
-		this.minY = y;
+	public void setMinY(double minY) {
+		if (minY > this.maxY) {
+			this.minY = this.maxY;
+			this.maxY = minY;
+		} else {
+			this.minY = minY;
+		}
 	}
 
 	public boolean contains(double x, double y) {
@@ -113,7 +125,7 @@ public class Box {
 
 	public void setMaxX(double maxX) {
 		if (maxX < this.minX) {
-			this.maxX = minX;
+			this.maxX = this.minX;
 			this.minX = maxX;
 		} else {
 			this.maxX = maxX;
@@ -126,7 +138,7 @@ public class Box {
 
 	public void setMaxY(double maxY) {
 		if (maxY < this.minY) {
-			this.maxY = minY;
+			this.maxY = this.minY;
 			this.minY = maxY;
 		} else {
 			this.maxY = maxY;
@@ -134,9 +146,9 @@ public class Box {
 	}
 
 	public double getCenterX() {
-		return maxX - minX;
+		return (minX + maxX) / 2;
 	}
 	public double getCenterY() {
-		return maxY - minY;
+		return (minY + maxY) / 2;
 	}
 }

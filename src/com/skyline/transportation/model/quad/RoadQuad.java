@@ -1,7 +1,7 @@
 package com.skyline.transportation.model.quad;
 
 /* *********************************************************************** *
- * RoadTree.java                                                           *
+ * RoadQuad.java                                                           *
  * *********************************************************************** *
  * date created    : August, 2012                                          *
  * email           : info@kirstywilliams.co.uk                             *
@@ -16,21 +16,20 @@ import sun.security.action.*;
 import com.skyline.geometry.*;
 import com.skyline.transportation.model.*;
 
-public class RoadTree {
+public class RoadQuad {
 
 	protected RoadTreeNode root = null;
 	private int size = 0;
 	private AbstractCollection<ControlPoint> values = null;
-	private static RoadTree instance = new RoadTree(0, 0, 1, 1);
 
-	public static RoadTree getInstance() {
-		return instance;
+	public RoadQuad() {
+		this(0, 0, 2, 2);
 	}
 
 	/**
-	 * Creates an empty RoadTree with the bounds
+	 * Creates an empty RoadQuad with the bounds
 	 */
-	private RoadTree(double minX, double minY, double maxX, double maxY) {
+	public RoadQuad(double minX, double minY, double maxX, double maxY) {
 		this.root = new RoadTreeNode(minX, minY, maxX, maxY);
 	}
 
@@ -177,7 +176,7 @@ public class RoadTree {
 
 				@Override
 				public int size() {
-					return RoadTree.this.size;
+					return RoadQuad.this.size;
 				}
 			};
 		}
@@ -198,31 +197,51 @@ public class RoadTree {
 
 	public RoadSegment getRoadSegment(double x1, double y1, double x2, double y2) {
 		RoadTreeNode nd = root.getFirstCommonAncestor(x1, y1, x2, y2);
-		Set<RoadSegment> segments=nd.getSegments();
-		if(segments!=null && segments.size()>0){
-			 for(RoadSegment seg : segments){
-				 ControlPoint start = seg.getStartPoint();
-				 ControlPoint end = seg.getEndPoint();
-				 if((start.getX()==x1 && start.getY()==y1 && end.getX()==x2 && end.getY()==y2)
-						 || (start.getX()==x2 && start.getY()==y2 && end.getX()==x1 && end.getY()==y1)){
-					 //found it.
-					 return seg;
-				 }
-			 }
+		Set<RoadSegment> segments = nd.getSegments();
+		if (segments != null && segments.size() > 0) {
+			for (RoadSegment seg : segments) {
+				ControlPoint start = new ControlPoint(x1, y1);
+				ControlPoint end = new ControlPoint(x2, y2);
+				if ((seg.getStartPoint().equals(start) && seg.getEndPoint().equals(end))
+						|| (seg.getStartPoint().equals(end) && seg.getEndPoint().equals(start))) {
+					// found it.
+					return seg;
+				}
+			}
 		}
-		return null;	//didn't find it.
-		
+		return null; // didn't find it.
+
 	}
 
 	public void put(RoadSegment segment) {
-		//First, add the individual ControlPoints.
+		// First, add the individual ControlPoints.
 		put(segment.getStartPoint());
 		put(segment.getEndPoint());
-		
-		//Then, find the first common ancestor for both points.
+
+		// Then, find the first common ancestor for both points.
 		RoadTreeNode ancestor = root.getFirstCommonAncestor(segment.getStartPoint(), segment.getEndPoint());
-		
-		//Then, add the segment to that node's segments collection.
+
+		// Then, add the segment to that node's segments collection.
 		ancestor.put(segment);
+	}
+
+	public Set<RoadSegment> getAllSegments(double minX, double minY, double maxX, double maxY) {
+		return this.root.getContainedSegments(minX, minY, maxX, maxY);
+	}
+
+	public Set<RoadSegment> getAllSegments() {
+		return this.root.getAllSegments();
+	}
+
+	/**
+	 * Remove the specified segment from the RoadQuad. If the endpoints are not
+	 * used by any other segment, and the removeEndpoints parameter is set to
+	 * true, remove the endpoints as well.
+	 * 
+	 * @param seg
+	 * @param removeEndPoints
+	 */
+	public void remove(RoadSegment seg, boolean removeEndPoints) {
+		this.root.remove(seg, removeEndPoints);
 	}
 }

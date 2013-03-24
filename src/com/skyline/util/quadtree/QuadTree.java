@@ -1,7 +1,7 @@
 package com.skyline.util.quadtree;
 
 /* *********************************************************************** *
- * RoadTree.java                                                           *
+ * RoadQuad.java                                                           *
  * *********************************************************************** *
  * date created    : August, 2012                                          *
  * email           : info@kirstywilliams.co.uk                             *
@@ -20,7 +20,7 @@ public class QuadTree<T> {
 	private AbstractCollection<T> values = null;
 
 	/**
-	 * Creates an empty RoadTree with the bounds
+	 * Creates an empty RoadQuad with the bounds
 	 */
 	public QuadTree(double minX, double minY, double maxX, double maxY) {
 		this.root = new QuadNode<T>(minX, minY, maxX, maxY);
@@ -28,7 +28,7 @@ public class QuadTree<T> {
 
 	/**
 	 * Associates the specified value with the specified coords in this
-	 * RoadTree.
+	 * RoadQuad.
 	 */
 	public boolean put(double x, double y, T value) {
 		if (this.root.put(x, y, value)) {
